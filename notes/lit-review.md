@@ -31,7 +31,7 @@ From the interp methods sweep, the toolkit and its known failure modes:
 - Probes require Hewitt-style control tasks and selectivity reporting. SAE-based claims without linear probe baselines get punished; SAE probing loses to logistic regression across regimes (Engels et al., arXiv:2502.16681), and SAEs do not find canonical units (Leask et al., ICLR 2025). We use SAEs for discovery only.
 - Attribution patching (arXiv:2310.10348, AtP* arXiv:2403.00745) makes screening thousands of sites affordable at 7B to 32B scale before exact patching confirms.
 - Sentence-level counterfactual resampling on reasoning traces (thought anchors, Bogdan et al., arXiv:2506.19143) is the state of the art for which written sentences are causally read back, including the "receiver head" mechanism. This is the external-side tool to pair with our internal-side interventions.
-- The controls reviewers demand for any ablation claim: random directions of matched rank and norm, control tasks that must stay flat, dose-response curves, and a global damage meter (KL to the clean model).
+- The controls any ablation claim needs: random directions of matched rank and norm, control tasks that must stay flat, dose-response curves, and a global damage meter (KL to the clean model).
 
 ## 4. task families
 
@@ -54,4 +54,4 @@ The claim "models externalize when internal capacity is pressured" exists as the
 
 A 2025-26 wave now covers much of the correlational ground: answers decodable from activations before verbalization (arXiv:2603.05488 "Reasoning Theater", arXiv:2603.01437), activations carrying more state than the trace shows (arXiv:2604.18307, arXiv:2606.13603), and depth-parameterized state-tracking probes (arXiv:2603.27343, WMF-AM). This is why observation-only phases are framed as calibration and the contribution rests on the interventions.
 
-Nearest neighbors to cite and position against: Li et al. 2024 (the theorem), Kudo et al. 2024 (the behavioral dissociation), Lanham et al. 2023 (capacity-dependent reliance), Korbak et al. 2025 (the framing), Bogdan et al. 2025 (the external-side tooling). Before submission, re-check arXiv:2605.30343 ("Unlocking the Working Memory of LLMs for Latent Reasoning") and arXiv:2604.15726 ("LLM Reasoning Is Latent, Not the Chain of Thought"), which are the closest recent items; the latter is the antagonist paper our causal design has to engage.
+Nearest neighbors to cite and position against: Li et al. 2024 (the theorem), Kudo et al. 2024 (the behavioral dissociation), Lanham et al. 2023 (capacity-dependent reliance), Korbak et al. 2025 (the framing), Bogdan et al. 2025 (the external-side tooling). Before writing up, re-check arXiv:2605.30343 ("Unlocking the Working Memory of LLMs for Latent Reasoning") and arXiv:2604.15726 ("LLM Reasoning Is Latent, Not the Chain of Thought"), which are the closest recent items; the latter is the antagonist paper our causal design has to engage.
