@@ -69,18 +69,63 @@ class WindowLesion:
 
 
 @torch.no_grad()
-def build_bank(model, tok, prompts, layers, device, per_prompt=8):
-    """Collect residual-stream vectors at the given layers from reasoning
-    positions of unrelated instances (prompt-only forward pass, last
-    per_prompt positions)."""
+def build_bank(model, tok, prompts, layers, device, per_prompt=24,
+               gen_tokens=256):
+    """Collect residual-stream vectors at the given layers from GENERATED
+    reasoning positions of unrelated instances: generate a partial trace
+    first, then a forward pass over prompt+trace, sampling positions from
+    the generated region only. Resampling from these keeps the lesion
+    on the reasoning-state distribution."""
     bank = {li: [] for li in layers}
     for p in prompts:
         ids = tok(p, return_tensors="pt").to(device)
-        out = model(**ids, output_hidden_states=True)
+        plen = ids["input_ids"].shape[1]
+        gen = model.generate(**ids, max_new_tokens=gen_tokens,
+                             do_sample=True, temperature=0.6, top_p=0.95,
+                             pad_token_id=tok.eos_token_id)
+        out = model(gen, output_hidden_states=True)
+        n_gen = gen.shape[1] - plen
+        take = min(per_prompt, n_gen)
+        idxs = torch.linspace(plen, gen.shape[1] - 1, take).long()
         for li in layers:
             hs = out.hidden_states[li + 1][0]  # [seq, d]
-            bank[li].append(hs[-per_prompt:].float().cpu())
+            bank[li].append(hs[idxs].float().cpu())
     return {li: torch.cat(v) for li, v in bank.items()}
+
+
+@torch.no_grad()
+def measure_damage(model, tok, texts, lesion, device):
+    """Mean KL(clean || lesioned) over continuation positions of neutral
+    texts: the global damage meter used to match doses across arms."""
+    import torch.nn.functional as F
+    kls = []
+    for t in texts:
+        ids = tok(t, return_tensors="pt", truncation=True,
+                  max_length=512).to(device)
+        lesion.enabled = False
+        clean = model(**ids).logits[0, 1:]
+        # hook only fires on decode steps (seq len 1), so for the damage
+        # meter we run token-by-token over the last 64 positions
+        lesion.enabled = True
+        lesioned_rows = []
+        past = None
+        n = ids["input_ids"].shape[1]
+        start = max(1, n - 64)
+        pre = model(ids["input_ids"][:, :start], use_cache=True)
+        past = pre.past_key_values
+        for pos in range(start, n):
+            o = model(ids["input_ids"][:, pos:pos + 1],
+                      past_key_values=past, use_cache=True)
+            past = o.past_key_values
+            lesioned_rows.append(o.logits[0, 0])
+        lesion.enabled = False
+        les = torch.stack(lesioned_rows)
+        cl = clean[start - 1:]
+        kl = F.kl_div(F.log_softmax(les.float(), -1),
+                      F.log_softmax(cl.float(), -1),
+                      log_target=True, reduction="none").sum(-1).mean()
+        kls.append(kl.item())
+    return sum(kls) / len(kls)
 
 
 @torch.no_grad()
@@ -101,7 +146,9 @@ def main():
     ap.add_argument("--family", default="variable_chain")
     ap.add_argument("--difficulty", type=int, default=8)
     ap.add_argument("--n", type=int, default=200)
-    ap.add_argument("--alpha", type=float, default=0.35)
+    ap.add_argument("--alphas", default="0.15,0.3,0.5",
+                    help="dose sweep; damage matching across arms happens "
+                    "in analysis via the logged kl")
     ap.add_argument("--target-layers", default="12-17",
                     help="mid-stack window, inclusive range")
     ap.add_argument("--control-layers", default="4-9",
@@ -134,32 +181,41 @@ def main():
     all_layers = sorted(set(arms["target"] + arms["control"]))
     bank = build_bank(model, tok, bank_prompts, all_layers, device)
 
+    alphas = [float(a) for a in args.alphas.split(",")]
+    damage_texts = [build_prompt(gen(args.difficulty, 20_000 + s), "cot",
+                                 tok, True) for s in range(8)]
+
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as f:
         for arm, layers in arms.items():
-            for inst in insts:
-                prompt = build_prompt(inst, "cot", tok, True)
-                if layers is None:
-                    lesion = WindowLesion(model, [], 0.0, bank)
-                else:
-                    lesion = WindowLesion(model, layers, args.alpha, bank)
+            arm_alphas = [0.0] if layers is None else alphas
+            for alpha in arm_alphas:
+                lesion = WindowLesion(model, layers or [], alpha, bank)
                 with lesion:
-                    trace = generate_with_lesion(
-                        model, tok, prompt, lesion, args.max_new, device)
-                pred = extract_answer(trace, "cot")
-                ext = externalization_record(trace, inst.intermediates,
-                                             prompt_values(inst))
-                f.write(json.dumps({
-                    "arm": arm, "alpha": args.alpha if layers else 0.0,
-                    "difficulty": args.difficulty, "seed": inst.seed,
-                    "correct": pred.strip().lower()
-                        == inst.answer.strip().lower(),
-                    "trace_tokens": len(tok(trace)["input_ids"]),
-                    "ext_frac": ext["externalization_fraction"],
-                    "trace": trace[:3000],
-                }) + "\n")
-                f.flush()
-            print(f"arm {arm} done", flush=True)
+                    kl = 0.0 if layers is None else measure_damage(
+                        model, tok, damage_texts, lesion, device)
+                    print(f"arm={arm} alpha={alpha} kl={kl:.4f}",
+                          flush=True)
+                    for inst in insts:
+                        prompt = build_prompt(inst, "cot", tok, True)
+                        trace = generate_with_lesion(
+                            model, tok, prompt, lesion, args.max_new,
+                            device)
+                        pred = extract_answer(trace, "cot")
+                        ext = externalization_record(
+                            trace, inst.intermediates, prompt_values(inst))
+                        f.write(json.dumps({
+                            "arm": arm, "alpha": alpha, "kl": kl,
+                            "difficulty": args.difficulty,
+                            "seed": inst.seed,
+                            "correct": pred.strip().lower()
+                                == inst.answer.strip().lower(),
+                            "trace_tokens": len(tok(trace)["input_ids"]),
+                            "ext_frac": ext["externalization_fraction"],
+                            "trace": trace[:3000],
+                        }) + "\n")
+                        f.flush()
+                print(f"arm {arm} alpha {alpha} done", flush=True)
 
 
 if __name__ == "__main__":

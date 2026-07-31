@@ -33,21 +33,21 @@ from harness.generate import build_prompt, extract_answer  # noqa: E402
 
 
 def forward_from(inst, step_idx, new_value):
-    """Recompute the chain answer assuming step step_idx produced new_value."""
+    """Recompute the chain answer assuming the intermediate at index
+    step_idx took new_value. Uses the generator's own op list from meta,
+    never re-parses the prompt."""
+    ops = inst.meta["ops"]
     if inst.family == "mod_arithmetic":
         p = inst.meta["modulus"]
         val = new_value % p
-        ops = re.findall(r"([+\-*]) (\d+)", inst.prompt)
-        for op, arg in ops[step_idx + 1:]:
-            a = int(arg)
+        for op, a in ops[step_idx + 1:]:  # inters[i] is the result of ops[i]
             val = (val + a) % p if op == "+" else \
                   (val - a) % p if op == "-" else (val * a) % p
         return str(val)
     if inst.family == "variable_chain":
         val = new_value
-        ops = re.findall(r"= \w+ ([+\-]) (\d+)", inst.prompt)
-        for op, arg in ops[step_idx:]:  # ops[i] maps step i -> i+1
-            val = val + int(arg) if op == "+" else val - int(arg)
+        for op, a in ops[step_idx:]:  # inters[0] is the start; ops[i]: i->i+1
+            val = val + a if op == "+" else val - a
         return str(val)
     raise ValueError(inst.family)
 
@@ -88,26 +88,42 @@ def main():
         gens = llm.generate(prompts, sp)
 
         cont_prompts, metas = [], []
-        for inst, g in zip(insts, gens):
+        for inst, prompt, g in zip(insts, prompts, gens):
             trace = g.outputs[0].text
             pred = extract_answer(trace, "cot")
-            if pred.strip() != inst.answer:
+            if pred.strip().lower() != inst.answer.strip().lower():
                 continue  # only corrupt correct traces
-            # pick a mid-chain step whose value is written in the trace
+            # values that appear in the prompt or repeat across steps are
+            # ambiguous corruption targets: skip them entirely
+            pvals = {v for v in re.findall(r"-?\d+", inst.prompt)}
+            all_vals = [v for _, v in inst.intermediates]
             candidates = []
             for idx, (name, value) in enumerate(inst.intermediates):
                 if idx < 1 or idx > len(inst.intermediates) - 2:
                     continue  # skip first and last steps
+                if str(value) in pvals or all_vals.count(value) > 1:
+                    continue
                 spans = find_value_mentions(trace, value)
                 if spans:
-                    candidates.append((idx, value, spans[0]))
+                    # corrupt the LAST clean mention: it is the copy the
+                    # continuation is most plausibly reading
+                    candidates.append((idx, value, spans[-1]))
             if not candidates:
                 continue
             idx, value, (a, b) = rng.choice(candidates)
-            newv = corrupt_value(value, rng)
+            # reject corruptions colliding with any prompt value or other
+            # intermediate, so downstream matching stays unambiguous
+            newv = None
+            for _ in range(20):
+                cand = corrupt_value(value, rng)
+                if str(cand) not in pvals and str(cand) not in all_vals:
+                    newv = cand
+                    break
+            if newv is None:
+                continue
             corrupted = trace[:a] + str(newv) + trace[b:]
             cut = a + len(str(newv))
-            cont_prompts.append(prompts[insts.index(inst)] + corrupted[:cut])
+            cont_prompts.append(prompt + corrupted[:cut])
             metas.append((inst, idx, int(value), newv, trace))
 
         if not cont_prompts:

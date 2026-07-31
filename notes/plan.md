@@ -50,7 +50,11 @@ Framing note: recent work already establishes the correlational premise that act
 
 Design point: also measure direct-answer accuracy at each d. If externalization onset simply tracks the point where direct answering fails, that is consistent with the hypothesis, but if models externalize far below that point (as overthinking work suggests) or far above it, the simple cost-benefit story is wrong and we need to say so.
 
-## phase 2: locate the workspace and the write/read operations (white-box, R1-distill 7B and 14B)
+## phase 1.5: the protection experiment (early, reuses gate A machinery and phase 1 conditions)
+
+The direct factorial at the heart of the question: accuracy under internal lesion x answer condition (direct vs CoT) x difficulty d. If written tokens carry state that would otherwise live in the residual stream, CoT should protect accuracy against internal lesions, and the size of that protection should depend on d in a way that discriminates hypotheses. Three pre-registered outcome patterns (see predictions.md): protection roughly constant in d; protection shrinking at high d (externalization is partial, the hardest problems still lean on internal state); protection growing with d (easy problems write nothing down, so there is nothing external to fall back on).
+
+The stronger per-instance version: within a fixed (lesion, d) cell, regress lesioned-accuracy on the instance's own externalization fraction from its clean trace. Protection tracking externalization at the instance level is much harder to explain away than a cell-level correlation, and the same regression run on the random-window control arm gives the matched-damage comparison for free.
 
 2a. probes for intermediate values. Train linear probes for each intermediate value v_i at each layer and token position, with Hewitt-style control tasks (shuffled-label probes) and selectivity reporting. This gives a map of where and when each value is represented internally. Establish the probe baseline before any SAE work; SAEs (Gemma Scope on Gemma-2, Goodfire on R1 if usable) are discovery aids only.
 

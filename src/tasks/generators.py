@@ -26,13 +26,18 @@ class Instance:
         return asdict(self)
 
 
+_OP_WORDS = {"+": "add", "-": "subtract", "*": "multiply by"}
+
+
 def mod_arithmetic(depth, seed, modulus=97):
-    """Chain of k operations mod p. Serial depth knob: depth."""
+    """Chain of k operations mod p, presented as explicit sequential steps
+    so there is no precedence ambiguity. Serial depth knob: depth."""
     rng = random.Random(seed)
-    ops = []
     val = rng.randrange(modulus)
     start = val
     inters = []
+    ops = []
+    lines = [f"Start with {start}."]
     for i in range(depth):
         op = rng.choice(["+", "-", "*"])
         arg = rng.randrange(2, modulus)
@@ -42,44 +47,50 @@ def mod_arithmetic(depth, seed, modulus=97):
             val = (val - arg) % modulus
         else:
             val = (val * arg) % modulus
-        ops.append(f"{op} {arg}")
+        ops.append((op, arg))
+        lines.append(f"Step {i+1}: {_OP_WORDS[op]} {arg}, "
+                     f"then reduce mod {modulus}.")
         inters.append((f"step_{i+1}", str(val)))
-    expr = f"{start} " + " ".join(ops)
-    prompt = (
-        f"Compute ({expr}) mod {modulus}. "
-        f"Apply the operations left to right, reducing mod {modulus} after each step."
-    )
+    prompt = ("Apply the following steps in order.\n" + "\n".join(lines) +
+              "\nWhat is the final value?")
     return Instance("mod_arithmetic", depth, seed, prompt, str(val), inters,
-                    {"modulus": modulus, "start": start})
+                    {"modulus": modulus, "start": start, "ops": ops})
 
 
-def variable_chain(depth, seed, n_distractors=0, lo=1, hi=9):
-    """LEGO-style chain: a=5; b=a+2; ... query the last variable.
+def variable_chain(depth, seed, n_distractors=0, lo=10, hi=99):
+    """LEGO-style chain: a=347; b=a+52; ... query the last variable.
 
     depth = chain length (serial knob). n_distractors adds independent
     variables that are never queried (parallel-load knob, varied separately).
+    Operands are 2 digits and the start 3 digits so intermediate values
+    rarely collide with prompt operands or each other; collisions that do
+    happen are caught by the ambiguity flag downstream.
     """
     rng = random.Random(seed)
     names = _var_names(rng, depth + n_distractors)
     chain_names = names[:depth]
     lines = []
     inters = []
-    val = rng.randint(lo, hi)
+    ops = []
+    val = rng.randint(100, 999)
     lines.append(f"{chain_names[0]} = {val}")
     inters.append((chain_names[0], str(val)))
     for i in range(1, depth):
         op = rng.choice(["+", "-"])
         arg = rng.randint(lo, hi)
         val = val + arg if op == "+" else val - arg
+        ops.append((op, arg))
         lines.append(f"{chain_names[i]} = {chain_names[i-1]} {op} {arg}")
         inters.append((chain_names[i], str(val)))
     # distractors: short independent assignments interleaved at random slots
     for name in names[depth:]:
-        lines.insert(rng.randrange(len(lines) + 1), f"{name} = {rng.randint(lo, hi)}")
+        lines.insert(rng.randrange(len(lines) + 1),
+                     f"{name} = {rng.randint(100, 999)}")
     prompt = "Given these assignments:\n" + "\n".join(lines) + \
              f"\nWhat is the value of {chain_names[-1]}?"
     return Instance("variable_chain", depth, seed, prompt, str(val), inters,
-                    {"n_distractors": n_distractors, "query": chain_names[-1]})
+                    {"n_distractors": n_distractors,
+                     "query": chain_names[-1], "ops": ops})
 
 
 def entity_tracking(n_boxes, n_moves, seed):
@@ -97,8 +108,9 @@ def entity_tracking(n_boxes, n_moves, seed):
         a, b = rng.sample(range(n_boxes), 2)
         boxes[a], boxes[b] = boxes[b], boxes[a]
         lines.append(f"Swap the contents of Box {a+1} and Box {b+1}.")
-        state = ", ".join(f"box{i+1}={boxes[i]}" for i in range(n_boxes))
-        inters.append((f"state_after_{step+1}", state))
+        # per-box values so trace matching has strings that actually occur
+        inters.append((f"box{a+1}_after_{step+1}", boxes[a]))
+        inters.append((f"box{b+1}_after_{step+1}", boxes[b]))
     q = rng.randrange(n_boxes)
     prompt = "\n".join(lines) + f"\nWhat is in Box {q+1} at the end?"
     return Instance("entity_tracking", n_moves, seed, prompt, boxes[q], inters,
@@ -112,15 +124,28 @@ def dag_reachability(hops, seed, width=3, n_noise_edges=6):
     layers = [[f"N{l}{w}" for w in range(width)] for l in range(hops + 1)]
     path = [rng.choice(layer) for layer in layers]
     edges = set(zip(path, path[1:]))
-    # noise edges within adjacent layers, avoiding alternative full paths:
-    # any noise edge must not start on the true path
+    # noise edges of two kinds so the walk requires actual search:
+    # (a) from off-path nodes anywhere in the next layer, and (b) from path
+    # nodes into dead ends. Dead-end targets are tracked and never given
+    # outgoing edges, so no alternative full path exists but a greedy walk
+    # from a path node can still go wrong and need backtracking.
+    dead_ends = set()
     tries = 0
-    while len(edges) < hops + n_noise_edges and tries < 200:
+    while len(edges) < hops + n_noise_edges and tries < 400:
         tries += 1
         l = rng.randrange(hops)
         a, b = rng.choice(layers[l]), rng.choice(layers[l + 1])
-        if a not in path and (a, b) not in edges:
+        if (a, b) in edges or a in dead_ends:
+            continue
+        if a in path:
+            if b == path[l + 1] or l + 1 == hops:
+                continue  # no duplicate of the true edge; no fake goals
+            dead_ends.add(b)
             edges.add((a, b))
+        elif b not in dead_ends or l + 1 < hops:
+            edges.add((a, b))
+    # dead ends must stay dead: drop any outgoing edges they picked up
+    edges = {(a, b) for a, b in edges if a not in dead_ends}
     edge_list = sorted(edges)
     rng.shuffle(edge_list)
     inters = [(f"hop_{i+1}", node) for i, node in enumerate(path[1:])]

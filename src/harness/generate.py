@@ -33,8 +33,13 @@ def build_prompt(inst, condition, tokenizer, is_reasoning_model):
     out = tokenizer.apply_chat_template(msgs, tokenize=False,
                                         add_generation_prompt=True)
     if condition == "direct" and is_reasoning_model:
-        # suppress the think block; reported as secondary per plan.md
-        out += "<think>\n\n</think>\n\n"
+        # suppress the think block; reported as secondary per plan.md.
+        # some R1-distill template versions already open <think> in the
+        # generation prompt, so only add what is missing
+        if out.rstrip().endswith("<think>"):
+            out += "\n\n</think>\n\n"
+        else:
+            out += "<think>\n\n</think>\n\n"
     return out
 
 
@@ -82,13 +87,14 @@ def main():
     with open(args.out, "w") as f:
         for cond in conditions:
             temp = 0.0 if cond == "direct" else args.temperature
-            sp = SamplingParams(
-                temperature=temp, top_p=args.top_p,
-                max_tokens=64 if cond == "direct" else args.max_tokens,
-                seed=None)
             for d in diffs:
                 insts = [gen(d, s) for s in range(args.n)]
                 for rep in range(args.seeds if cond != "direct" else 1):
+                    sp = SamplingParams(
+                        temperature=temp, top_p=args.top_p,
+                        max_tokens=64 if cond == "direct"
+                        else args.max_tokens,
+                        seed=rep)  # reproducible sampling per rep
                     prompts = [build_prompt(i, cond, tok, is_reasoning)
                                for i in insts]
                     outs = llm.generate(prompts, sp)

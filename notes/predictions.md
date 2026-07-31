@@ -18,6 +18,12 @@ Opposite results that would be visible: (a) externalization fraction is high at 
 
 Also expected: the direct-answer accuracy cliff sits above d* for reasoning models (they write before they must). If instead d* coincides exactly with the cliff, the cost-benefit story is cleaner than we assumed; if d* sits far below the cliff, habit dominates capacity.
 
+## phase 1.5, protection
+
+Expected: CoT protects accuracy against internal lesions relative to the direct condition, with protection shrinking at high d. Why: at low-to-mid d the trace holds most intermediates, so lesioning the workspace leaves the external copies intact; at high d traces degrade and some load returns to internal state. Weaker secondary expectation: per-instance protection tracks the clean-trace externalization fraction, positive slope, absent in the random-window arm at matched KL.
+
+Opposite results visible in the same design: (a) no protection anywhere, CoT and direct degrade alike, meaning written tokens are not a usable store under damage, a hard blow to the hierarchy reading; (b) protection constant in d, meaning externalization coverage does not thin out with difficulty in the measured range; (c) protection growing with d, the reasonable pattern if easy problems are answered without writing anything, so there is no external fallback. Pattern (c) and our expected pattern differ only in where on the d axis the trace has content, so the externalization curves from phase 1 are read alongside this result and the interpretation is committed to before unblinding: whichever pattern appears, it is interpreted jointly with the measured externalization fraction at that d, not by itself.
+
 ## phase 2b, eviction
 
 Expected: probe decodability of an intermediate value at current-position residual streams drops faster after the value is written to tokens than in matched unwritten cases at equal distance from computation. Why: keeping a copy is expensive under superposition interference; a written value is retrievable by attention, so the workspace should reclaim the space. Effect size guess: modest, 10 to 30 relative percent drop, not to zero, since breadcrumbs persist.
