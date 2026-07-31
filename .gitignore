@@ -1,0 +1,12 @@
+.claude/
+initial-prompt.md
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.ipynb_checkpoints
+results/raw/
+*.pt
+*.safetensors
+.env
+.DS_Store
