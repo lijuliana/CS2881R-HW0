@@ -61,9 +61,16 @@ def main():
 
     done = set()
     if os.path.exists(args.out):
+        kept = []
         for line in open(args.out):
             r = json.loads(line)
+            if "error" in r:
+                continue  # errored items get retried, not marked done
             done.add((r["condition"], r["difficulty"], r["seed"]))
+            kept.append(line)
+        # rewrite without error rows so the file stays clean on resume
+        with open(args.out, "w") as fo:
+            fo.writelines(kept)
 
     gen = FAMILIES[args.family]
     jobs = []
@@ -87,8 +94,8 @@ def main():
                 client, args.model_id, text,
                 200 if cond == "direct" else args.max_tokens, temp)
         except Exception as e:
-            return {"condition": cond, "difficulty": d, "seed": s,
-                    "error": str(e)[:200]}
+            return {"model": args.model_id, "condition": cond,
+                    "difficulty": d, "seed": s, "error": str(e)[:200]}
         full = (reasoning + "\n" + answer).strip()
         pred = extract_answer(answer or full, cond)
         ext = None

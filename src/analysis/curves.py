@@ -24,6 +24,8 @@ def load(paths):
         with open(p) as f:
             for line in f:
                 r = json.loads(line)
+                if "error" in r:
+                    continue
                 r.pop("trace", None)
                 rows.append(r)
     return rows
