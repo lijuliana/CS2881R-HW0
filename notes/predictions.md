@@ -2,6 +2,14 @@
 
 Written before running anything. Each entry: what we expect, why, and what the opposite result looks like in the same measurement. If a result cannot show us the opposite, the experiment is redesigned before it runs. Updates to this file only ever append; nothing gets edited after its experiment starts.
 
+## gate A, does the write policy respond online
+
+Expected: honestly close to a coin flip, prior around 40 to 50 percent that a layer-window lesion moves externalization fraction relative to random-site lesions at matched damage. The distills were trained by imitation, so the write policy may be open-loop. Opposite visible by construction: flat externalization under targeted lesions, which reroutes the paper to the fallback headline. Either outcome is decision-relevant, which is why this runs first.
+
+## gate B, is anything read back
+
+Expected: corruption flip rate above 50 percent at high d for arithmetic-style families, low at small d. Why: at high d the internal copy should be stale or absent, so downstream steps have to use the written token. Opposite visible: flip rate near zero everywhere, which supports the CoT-as-projection antagonist position and would make read-back a null result to report while shifting weight to 2b and phase 4.
+
 ## phase 1, externalization curves
 
 Expected: for each model, externalization fraction stays near zero up to some d*, then rises steeply; d* grows with model size; CoT length grows superlinearly past d*. Why: theory says single-pass serial capacity scales with depth, so bigger models can hold longer chains internally; Lanham-style inverse scaling of CoT reliance points the same way.

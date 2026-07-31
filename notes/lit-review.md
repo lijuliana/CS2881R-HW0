@@ -52,4 +52,6 @@ The claim "models externalize when internal capacity is pressured" exists as the
 2. eviction and read-back dynamics of the hierarchy, measured with probes plus patching
 3. a fitted crossover law for externalization onset across difficulty and a model-size ladder, tested against the log-depth prediction from theory, and checked across model families
 
+A 2025-26 wave now covers much of the correlational ground: answers decodable from activations before verbalization (arXiv:2603.05488 "Reasoning Theater", arXiv:2603.01437), activations carrying more state than the trace shows (arXiv:2604.18307, arXiv:2606.13603), and depth-parameterized state-tracking probes (arXiv:2603.27343, WMF-AM). This is why observation-only phases are framed as calibration and the contribution rests on the interventions.
+
 Nearest neighbors to cite and position against: Li et al. 2024 (the theorem), Kudo et al. 2024 (the behavioral dissociation), Lanham et al. 2023 (capacity-dependent reliance), Korbak et al. 2025 (the framing), Bogdan et al. 2025 (the external-side tooling). Before submission, re-check arXiv:2605.30343 ("Unlocking the Working Memory of LLMs for Latent Reasoning") and arXiv:2604.15726 ("LLM Reasoning Is Latent, Not the Chain of Thought"), which are the closest recent items; the latter is the antagonist paper our causal design has to engage.
