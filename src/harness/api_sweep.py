@@ -74,6 +74,9 @@ def main():
 
     gen = FAMILIES[args.family]
     jobs = []
+    # conditions: direct, free, cot, or budget:N (think, but at most N
+    # tokens; the cap is enforced by maxTokens so the model must choose
+    # what to write down)
     for cond in args.conditions.split(","):
         for d in [int(x) for x in args.difficulties.split(",")]:
             for s in range(args.n):
@@ -86,13 +89,23 @@ def main():
     def run(job):
         cond, d, s = job
         inst = gen(d, s)
-        text = inst.prompt + (DIRECT_SUFFIX if cond == "direct"
-                              else COT_SUFFIX if cond == "cot" else "")
+        budget = int(cond.split(":")[1]) if cond.startswith("budget") else None
+        if cond == "direct":
+            text = inst.prompt + DIRECT_SUFFIX
+            max_toks = 200
+        elif budget is not None:
+            text = (inst.prompt +
+                    f"\nYou have a strict budget of {budget} tokens for "
+                    "your entire response. Show only the working you most "
+                    "need, then give the final answer as 'Answer: X'.")
+            max_toks = budget
+        else:
+            text = inst.prompt + (COT_SUFFIX if cond == "cot" else "")
+            max_toks = args.max_tokens
         temp = 0.0 if cond == "direct" else args.temperature
         try:
             reasoning, answer, out_toks = call_bedrock(
-                client, args.model_id, text,
-                200 if cond == "direct" else args.max_tokens, temp)
+                client, args.model_id, text, max_toks, temp)
         except Exception as e:
             return {"model": args.model_id, "condition": cond,
                     "difficulty": d, "seed": s, "error": str(e)[:200]}
