@@ -34,13 +34,13 @@ Two cheap pilots run before probe training or large sweeps, because their outcom
 - gate A (does the write policy respond online at all): crudest internal squeeze, a layer-window resample lesion at one site on R1-distill-7B, one task family, 200 instances, checking only whether externalization fraction moves relative to random-site lesions at matched damage. Distilled models imitate teacher traces, so their write policy may be entirely open-loop; if this gate is flat, phase 3a is demoted from headline to section and the paper leads with eviction, read-back, and the onset law, which stand without it.
 - gate B (is anything read back): token-corrupt written intermediate values and measure answer flip rate vs d. The antagonist position ("reasoning is latent, the CoT is a projection") predicts flip rate near zero at all d. This pilot tells us which paper we are writing before we commit.
 
-Sampling config is pre-registered here: temperature 0.6 top-p 0.95 for R1-distills (their recommended settings), greedy for probing runs where determinism matters, with a sensitivity check between the two, since trace structure shifts with sampling and "CoT length increased" is noisy at temperature.
+Sampling config, fixed here up front: temperature 0.6 top-p 0.95 for R1-distills (their recommended settings), greedy for probing runs where determinism matters, with a sensitivity check between the two, since trace structure shifts with sampling and "CoT length increased" is noisy at temperature.
 
 ## phase 1: establish the phenomenon (behavioral, cheap, mostly API + small GPU)
 
 For each model and task family, sweep d and measure under three conditions: forced direct answer (no CoT), free generation, forced CoT. Record accuracy, CoT length, and which intermediate values appear verbatim in the trace (exact matching against ground truth, which our synthetic tasks make possible).
 
-Key quantity: the externalization curve, fraction of ground-truth intermediate values written down, as a function of d. The hypothesis predicts a characteristic shape: near zero below some d*, rising afterward, with d* increasing in model size. See predictions.md before any run.
+Key quantity: the externalization curve, fraction of ground-truth intermediate values written down, as a function of d. The hypothesis predicts a characteristic shape: near zero below some d*, rising afterward, with d* increasing in model size. See hypotheses.md before any run.
 
 Measuring externalization: exact match is the primary detector but is unsound alone, since values appear in variant surface forms and tokenizers split numbers differently across families, which would contaminate cross-family d* comparisons with verbalization style. So: (a) a programmatic normalization layer canonicalizes numerals and simple expressions (no LLM judging), and (b) on a subsample we use the causal definition, v_i counts as externalized iff corrupting its written form changes the answer. We report agreement between surface and causal definitions; where they diverge the causal one wins. A value can also be externalized as a derived quantity without appearing verbatim, which only the causal definition catches.
 
@@ -52,7 +52,7 @@ Design point: also measure direct-answer accuracy at each d. If externalization 
 
 ## phase 1.5: the protection experiment (early, reuses gate A machinery and phase 1 conditions)
 
-The direct factorial at the heart of the question: accuracy under internal lesion x answer condition (direct vs CoT) x difficulty d. If written tokens carry state that would otherwise live in the residual stream, CoT should protect accuracy against internal lesions, and the size of that protection should depend on d in a way that discriminates hypotheses. Three pre-registered outcome patterns (see predictions.md): protection roughly constant in d; protection shrinking at high d (externalization is partial, the hardest problems still lean on internal state); protection growing with d (easy problems write nothing down, so there is nothing external to fall back on).
+The direct factorial at the heart of the question: accuracy under internal lesion x answer condition (direct vs CoT) x difficulty d. If written tokens carry state that would otherwise live in the residual stream, CoT should protect accuracy against internal lesions, and the size of that protection should depend on d in a way that discriminates hypotheses. Three outcome patterns written down in advance (see hypotheses.md): protection roughly constant in d; protection shrinking at high d (externalization is partial, the hardest problems still lean on internal state); protection growing with d (easy problems write nothing down, so there is nothing external to fall back on).
 
 The stronger per-instance version: within a fixed (lesion, d) cell, regress lesioned-accuracy on the instance's own externalization fraction from its clean trace. Protection tracking externalization at the instance level is much harder to explain away than a cell-level correlation, and the same regression run on the random-window control arm gives the matched-damage comparison for free.
 
@@ -72,7 +72,7 @@ Two directions, because the hypothesis is about a two-way trade.
    - layer-window lesions at reasoning positions (resample ablation from matched control prompts)
    - workspace-subspace ablation (the phase 2d subspace), dose-controlled by rank and by interpolation strength
    - attention knockout to recent non-CoT context (shrinks effective internal carry)
-Measure: CoT length, externalization fraction, read-back fraction, accuracy. Hypothesis predicts a compensatory signature: externalization rises and accuracy partially recovers relative to matched-damage controls. The claim requires a four-gate conjunction, all pre-registered: externalization up, read-back fraction up, control tasks flat, and a steeper task-vs-control dose curve than random subspaces at matched KL. Any subset short of the conjunction is reported as what it is. Only run at full scale if gate A passed.
+Measure: CoT length, externalization fraction, read-back fraction, accuracy. Hypothesis predicts a compensatory signature: externalization rises and accuracy partially recovers relative to matched-damage controls. The claim requires a four-gate conjunction, stated in advance: externalization up, read-back fraction up, control tasks flat, and a steeper task-vs-control dose curve than random subspaces at matched KL. Any subset short of the conjunction is reported as what it is. Only run at full scale if gate A passed.
 
 Controls that separate targeted effect from generic degradation, all reported in every figure:
    - random subspaces of matched rank and norm, same layers, same positions

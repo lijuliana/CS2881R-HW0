@@ -8,7 +8,7 @@ The working hypothesis is that written reasoning functions as the slow tier of a
 
 - `notes/lit-review.md` - synthesis of prior work across four areas: latent reasoning, CoT faithfulness and monitorability, interp methods, difficulty scaling. Includes an honest novelty assessment of where this project sits.
 - `notes/plan.md` - the full experimental design: phases, controls, evaluation choices, compute plan.
-- `notes/predictions.md` - written before running anything. What we expect from each experiment, why, and what the opposite result would look like.
+- `notes/hypotheses.md` - initial hypotheses, written before running anything: what we expect from each experiment, why, and what the opposite result would look like.
 - `src/` - task generators, model harness, probing and patching code (added as phases begin).
 - `experiments/` - one directory per experiment, each with a config, a short readme, and analysis.
 - `results/` - figures and summary tables. Raw activations stay out of git.

@@ -1,6 +1,6 @@
-# predictions
+# initial hypotheses
 
-Written before running anything. Each entry: what we expect, why, and what the opposite result looks like in the same measurement. If a result cannot show us the opposite, the experiment is redesigned before it runs. Updates to this file only ever append; nothing gets edited after its experiment starts.
+What we expected before running anything, and why. Each entry also says what the opposite result would look like in the same measurement; if a result could not show us the opposite, the experiment gets redesigned before it runs. Kept as a running record: updates append, nothing gets rewritten after its experiment starts.
 
 ## gate A, does the write policy respond online
 
@@ -22,7 +22,7 @@ Also expected: the direct-answer accuracy cliff sits above d* for reasoning mode
 
 Expected: CoT protects accuracy against internal lesions relative to the direct condition, with protection shrinking at high d. Why: at low-to-mid d the trace holds most intermediates, so lesioning the workspace leaves the external copies intact; at high d traces degrade and some load returns to internal state. Weaker secondary expectation: per-instance protection tracks the clean-trace externalization fraction, positive slope, absent in the random-window arm at matched KL.
 
-Opposite results visible in the same design: (a) no protection anywhere, CoT and direct degrade alike, meaning written tokens are not a usable store under damage, a hard blow to the hierarchy reading; (b) protection constant in d, meaning externalization coverage does not thin out with difficulty in the measured range; (c) protection growing with d, the reasonable pattern if easy problems are answered without writing anything, so there is no external fallback. Pattern (c) and our expected pattern differ only in where on the d axis the trace has content, so the externalization curves from phase 1 are read alongside this result and the interpretation is committed to before unblinding: whichever pattern appears, it is interpreted jointly with the measured externalization fraction at that d, not by itself.
+Opposite results visible in the same design: (a) no protection anywhere, CoT and direct degrade alike, meaning written tokens are not a usable store under damage, a hard blow to the hierarchy reading; (b) protection constant in d, meaning externalization coverage does not thin out with difficulty in the measured range; (c) protection growing with d, the reasonable pattern if easy problems are answered without writing anything, so there is no external fallback. Pattern (c) and our expected pattern differ only in where on the d axis the trace has content, so the externalization curves from phase 1 are read alongside this result and the interpretation rule is fixed in advance: whichever pattern appears, it is interpreted jointly with the measured externalization fraction at that d, not by itself.
 
 ## phase 2b, eviction
 
