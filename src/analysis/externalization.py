@@ -46,6 +46,34 @@ def find_value_mentions(trace, value):
     return spans
 
 
+def entity_externalization_record(trace, intermediates):
+    """Entity-tracking variant. Object names all appear in the prompt, so
+    bare-mention matching is uninformative. Instead we require a statement
+    binding the box to the object after the move: patterns like
+    'box 3 ... <object>' within a short window, case-insensitive. The
+    intermediate name encodes the box ('box3_after_2')."""
+    records = []
+    for name, value in intermediates:
+        m = re.match(r"box(\d+)_after_(\d+)", name)
+        if not m:
+            records.append({"name": name, "value": value, "written": False,
+                            "spans": [], "ambiguous": True})
+            continue
+        box = m.group(1)
+        pat = re.compile(
+            r"[Bb]ox\s*" + box + r"\b[^.\n]{0,60}?\b" + re.escape(value)
+            + r"\b|\b" + re.escape(value)
+            + r"\b[^.\n]{0,60}?[Bb]ox\s*" + box + r"\b")
+        spans = [(mm.start(), mm.end()) for mm in pat.finditer(trace)]
+        records.append({"name": name, "value": value,
+                        "written": bool(spans), "spans": spans,
+                        "ambiguous": False})
+    clean = [r for r in records if not r["ambiguous"]]
+    frac = (sum(r["written"] for r in clean) / len(clean)) if clean else None
+    return {"records": records, "externalization_fraction": frac,
+            "n_clean": len(clean)}
+
+
 def externalization_record(trace, intermediates, prompt_values=None):
     """For each (name, value) intermediate, report whether it is written in
     the trace and where.
