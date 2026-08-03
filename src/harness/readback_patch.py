@@ -61,14 +61,18 @@ def value_token_positions(tok, full_ids, prompt_ids_len, value_str):
 
 
 class ResidualPatch:
-    """Adds a per-position delta to residual stream at a layer band, for
-    positions >= start_pos. Deltas indexed by absolute position."""
+    """Overwrites the residual stream at a layer band with target states, at
+    positions in [start_pos, end_pos). Setting (not adding) avoids the
+    double-count that additive deltas cause when patching consecutive layers:
+    each patched layer's output is forced to the target regardless of the
+    patched input it received from the layer below."""
 
-    def __init__(self, model, layers, deltas, start_pos):
+    def __init__(self, model, layers, states, start_pos, end_pos):
         self.model = model
         self.layers = layers
-        self.deltas = deltas  # dict layer -> tensor [seq, d] (clean-corrupt)
+        self.states = states  # dict layer -> tensor [seq, d] target values
         self.start_pos = start_pos
+        self.end_pos = end_pos
         self.handles = []
         self.enabled = False
 
@@ -86,14 +90,12 @@ class ResidualPatch:
             seq = hs.shape[1]
             if seq == 1:
                 return output  # decode steps past the patched region
-            d = self.deltas.get(li)
-            if d is None:
+            st = self.states.get(li)
+            if st is None:
                 return output
-            add = torch.zeros_like(hs[0])
-            n = min(seq, d.shape[0])
-            add[:n] = d[:n].to(hs.dtype).to(hs.device)
-            add[:self.start_pos] = 0
-            hs = hs + add.unsqueeze(0)
+            hs = hs.clone()
+            lo, hi = self.start_pos, min(self.end_pos, seq, st.shape[0])
+            hs[0, lo:hi] = st[lo:hi].to(hs.dtype).to(hs.device)
             if isinstance(output, tuple):
                 return (hs,) + output[1:]
             return hs
@@ -192,19 +194,26 @@ def main():
         plen = tok(prompt + "\n", return_tensors="pt").input_ids.shape[1]
         cs = capture_states(model, clean_ids.input_ids, layers)
         xs = capture_states(model, corr_ids.input_ids, layers)
-        # patch positions: from the target value token onward
+        # patch region: from the corrupted value token to the end of prefix
         vpos = value_token_positions(
             tok, corr_ids.input_ids[0].tolist(), plen, str(corr_val))
         start = vpos[-1] if vpos else plen
-        deltas = {li: (cs[li] - xs[li]) for li in layers}
-        rand = {li: torch.randn_like(cs[li]) for li in layers}
-        for li in layers:  # match random norm to the true delta per position
-            dn = deltas[li].norm(dim=-1, keepdim=True)
-            rn = rand[li].norm(dim=-1, keepdim=True) + 1e-6
-            rand[li] = rand[li] / rn * dn
+        end = corr_ids.input_ids.shape[1]
+        # base: overwrite the band with the CLEAN states (restore internal
+        # value while token stays corrupt). random control: overwrite with
+        # the CORRUPT states nudged by a random vector of the same per-
+        # position norm as the clean-ward correction, so it is a matched-size
+        # perturbation that does not point toward clean.
+        clean_states = {li: cs[li] for li in layers}
+        rand_states = {}
+        for li in layers:
+            diff_norm = (cs[li] - xs[li]).norm(dim=-1, keepdim=True)
+            r = torch.randn_like(cs[li])
+            r = r / (r.norm(dim=-1, keepdim=True) + 1e-6) * diff_norm
+            rand_states[li] = xs[li] + r
 
-        base_patch = ResidualPatch(model, layers, deltas, start)
-        rand_patch = ResidualPatch(model, layers, rand, start)
+        base_patch = ResidualPatch(model, layers, clean_states, start, end)
+        rand_patch = ResidualPatch(model, layers, rand_states, start, end)
 
         corr_ans_gen = continue_from(model, tok, corr_ids.input_ids, None,
                                      args.max_new, args.samples)
