@@ -34,27 +34,7 @@ import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from tasks.generators import variable_chain  # noqa: E402
-
-
-def build_trace(inst, write_target=True):
-    """Deterministic worked trace. Returns (text, step_end_char_positions).
-    The target step (depth//2, 0-indexed over ops) either shows its result
-    or elides it."""
-    ops = inst.meta["ops"]
-    names = [n for n, _ in inst.intermediates]
-    vals = [int(v) for _, v in inst.intermediates]
-    tgt = len(ops) // 2  # op index; produces intermediate tgt+1
-    lines = [f"{names[0]} = {vals[0]}."]
-    ends = []
-    text = lines[0]
-    for i, (op, arg) in enumerate(ops):
-        if i == tgt and not write_target:
-            line = f" {names[i+1]} = {names[i]} {op} {arg}."
-        else:
-            line = f" {names[i+1]} = {names[i]} {op} {arg} = {vals[i+1]}."
-        text += line
-        ends.append(len(text))
-    return text, ends, tgt
+from tasks.traces import build_trace  # noqa: E402
 
 
 @torch.no_grad()

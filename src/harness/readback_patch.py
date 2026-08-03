@@ -45,7 +45,7 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from tasks.generators import variable_chain  # noqa: E402
 from harness.generate import build_prompt, extract_answer  # noqa: E402
-from harness.eviction_probe import build_trace  # reuse worked-trace builder
+from tasks.traces import build_trace
 
 
 def value_token_positions(tok, full_ids, prompt_ids_len, value_str):
@@ -171,14 +171,18 @@ def main():
 
         prompt = build_prompt(inst, "cot", tok, True)
         text, ends, _ = build_trace(inst, write_target=True)
-        # locate and overwrite the target value's last written mention
-        cut_char = ends[tgt]  # end of target step line
+        # cut at the end of the target step line; the target value is the
+        # final "= {clean_val}." of this prefix. Overwrite that specific
+        # (last) occurrence, not the first, since the value may recur earlier.
+        cut_char = ends[tgt]
         prefix = text[:cut_char]
         clean_prefix_text = prompt + "\n" + prefix
-        corr_prefix_text = clean_prefix_text.replace(
-            f"= {clean_val}.", f"= {corr_val}.")
-        if corr_prefix_text == clean_prefix_text:
-            continue
+        marker = f"= {clean_val}."
+        pos = clean_prefix_text.rfind(marker)
+        if pos == -1 or pos != len(clean_prefix_text) - len(marker):
+            continue  # target value not the final token of the prefix; skip
+        corr_prefix_text = (clean_prefix_text[:pos]
+                            + f"= {corr_val}." )
 
         clean_ids = tok(clean_prefix_text, return_tensors="pt").to(device)
         corr_ids = tok(corr_prefix_text, return_tensors="pt").to(device)
