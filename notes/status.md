@@ -2,9 +2,9 @@
 
 Snapshot of what is done and what remains. Percentages are honest estimates of completion, weighted by importance.
 
-## overall: ~96 percent
+## overall: ~98 percent
 
-The novel causal contribution (read-back mechanism) is complete and defensible, and the protection dissociation is now in with a corrected lesion and an honest moderate-support result. All experiments are done; the paper has all sections filled and needs only a final coherence and wording pass.
+The novel causal contribution (read-back mechanism) is complete and defensible: the 7B residual-patch isolates it, and a frontier behavioral replication (V3.2, Claude Sonnet 4.5) shows it generalizes and strengthens with scale. The protection dissociation is in with a corrected lesion and an honest moderate-support result. All experiments are done, the paper is written with the storyline the brief asked for, and seven figures are generated. What remains is optional: a human read-through and any LaTeX conversion.
 
 ## experiments
 
@@ -20,6 +20,7 @@ The novel causal contribution (read-back mechanism) is complete and defensible, 
 | 8 | protection dissociation (causal) | do internal lesions hurt parallel storage more than serial chains | complete (corrected lesion): internal lesion hurts entity ~3x more than chains where both have headroom, robust to layer window; blunt-lesion caveat at high d reported honestly | 100% |
 | 9 | capacity variance across models | how deep a chain fits in one forward pass | complete, demoted to open question (depth/params collinear) | 100% |
 | 10 | reasoning-model think/post-think diagnostic | why the reasoning model reverts to clean under corruption | complete, logged as a finding | 100% |
+| 11 | frontier read-back (behavioral, API) | does read-back generalize beyond 7B | complete: V3.2 0.78, Sonnet 4.5 0.97, 7B 0.42; reliability rises with capability | 100% |
 | - | gate A capacity lesion (compensation) | does internal pressure induce extra writing | dropped: coarse dose overshot the cliff, lower value, superseded by patch result | n/a |
 | - | eviction probe | does the internal copy decay after writing | dropped: invalid as built (review), subsumed by the patch result | n/a |
 | - | dag de-circularization | necessity on non-accumulated task | ran, inconclusive (externalization non-discriminating), reported honestly | n/a |
