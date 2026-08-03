@@ -129,8 +129,38 @@ def fig_budget():
     plt.close(fig)
 
 
+def fig_format():
+    """Accuracy per token by format, variable chains. Efficient value-store
+    (code_eval) vs prose vs verbose (state) vs value-suppressed (code)."""
+    import json as _json
+    rows = [_json.loads(l) for l in open(f"{RAW}/format_var_v32.jsonl")
+            if '"error"' not in l]
+    from collections import defaultdict as _dd
+    by = _dd(lambda: _dd(list))
+    for r in rows:
+        by[r["format"]][r["difficulty"]].append(r)
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4))
+    for fmt in ["code_eval", "prose", "state", "code"]:
+        ds = sorted(by[fmt])
+        acc = [np.mean([r["correct"] for r in by[fmt][d]]) for d in ds]
+        eff = [100 * np.mean([r["correct"] for r in by[fmt][d]])
+               / np.mean([r["trace_tokens"] for r in by[fmt][d]]) for d in ds]
+        axes[0].plot(ds, acc, "-o", label=fmt)
+        axes[1].plot(ds, eff, "-o", label=fmt)
+    axes[0].set_ylabel("accuracy")
+    axes[1].set_ylabel("accuracy per 100 tokens")
+    for ax in axes:
+        ax.set_xlabel("chain depth d")
+        ax.set_xscale("log", base=2)
+        ax.legend(fontsize=8)
+    axes[0].set_title("compact value store is the efficient scratchpad")
+    fig.tight_layout()
+    fig.savefig(f"{OUT}/format.png", dpi=150)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
-    for fn in [fig_necessity, fig_readback, fig_budget]:
+    for fn in [fig_necessity, fig_readback, fig_budget, fig_format]:
         try:
             fn()
             print(f"{fn.__name__} ok")

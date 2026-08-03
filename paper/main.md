@@ -56,14 +56,18 @@ We take the circularity objection seriously: on variable chains the format write
 
 Externalization predicts success on serial chains (1.00 among correct) but is uninformative on entity tracking, where the model succeeds at sixteen-move tracking while writing about a fifth of the state bindings (2026-08-02). Parallel state lives in activations; serial chaining does not. This is the transformer-expressivity prediction (bounded depth limits serial, not parallel, computation) appearing behaviorally in one model at matched task surface. The causal test is the protection experiment [PENDING]: internal lesions should hurt entity tracking more than chains at matched difficulty, and CoT should protect chains more than boxes.
 
-## 7. the one internal boundary
+## 7. external representation geometry
+
+If the written payload is memory, its format should matter for how much memory a fixed token budget buys. We requested the same variable chains in four scratchpad formats. A code-like format that writes each step's evaluated value as a comment is the efficient optimum, solving through forty-eight steps at a fraction of the tokens of prose and two to ten times its accuracy per token. Prose is next. A verbose format that restates the full running state each step is the least efficient and collapses at the deepest level, so over-externalization is as harmful as under. The sharpest condition is a code format that writes the operations but not their evaluated values: it suppresses value-writing at low depth and fails in proportion, with a per-instance correlation of externalization and correctness of +0.74 (writing under half the values gives 0.58 accuracy, writing nearly all gives 1.00). A format that nudges the model away from writing values makes it fail exactly to the degree it complies, which is behavioral evidence that the evaluated value, not the operation and not the surrounding prose, is the load-bearing payload. The practical reading is that a compact value-carrying scratchpad is the efficient external memory, and since it is also the most legible, the efficiency and the monitorability upside point the same way.
+
+## 8. the one internal boundary
 
 Since externalization has no onset, the boundary that does exist is internal serial capacity: how deep a chain a model completes in a single forward pass, read off the direct-answer cliff. It varies across models, from about one step in the distills and the DeepSeek pair to about four in Llama-70B. Whether this tracks depth or parameter count is not resolvable with the models we have (within a family the two are collinear, and the one cross-family contrast that points to depth is confounded), so we report it as a bounded, model-dependent quantity and an open question, not a fitted law.
 
-## 8. implications for monitorability
+## 9. implications for monitorability
 
 If a model must write serial intermediate state to compute at all, its chain-of-thought is monitorable for that computation as a matter of capacity, not goodwill: the necessity result is the optimistic case for oversight. The risks are the two boundaries. Parallel computation that fits in activations need not be written and is invisible by default, which bounds what monitoring can see. And a larger or deeper model with more internal serial capacity can move more computation off the page, so monitorability of serial reasoning may erode with scale exactly where the direct-answer cliff moves outward.
 
-## 9. limitations
+## 10. limitations
 
 Synthetic tasks trade ecological validity for exact intermediate ground truth, which is the right trade for causal work but caps generality. White-box results are on distilled reasoning models, so RL-specific claims are limited. Teacher-forced traces in the probing and patch experiments are mildly off the sampled-generation distribution. The capacity boundary is estimated from a coarse difficulty grid. Each result names its own controls and its own failure mode in the sections above.
