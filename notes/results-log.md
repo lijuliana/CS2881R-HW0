@@ -113,4 +113,8 @@ Honest caveats. First, the lesion is blunt: it damages the re-reading of written
 
 Net: the dissociation prediction (internal lesion hurts parallel storage more than serial chains) holds where it can be cleanly measured, at roughly a three to one ratio, robust to the lesioned window.
 
+## 2026-08-03, frontier read-back (behavioral, via API assistant prefill)
+
+We cannot patch residuals through an API, but the behavioral half of the read-back test runs at frontier scale: ask the model to solve a variable chain writing each value, corrupt one written value, prefill the assistant turn with the corrupted partial trace, and let it continue. DeepSeek V3.2 (671B), d=10, n=60: corrupting a written value flips the final answer 0.78 of the time (follows_clean 0.12, neither 0.10). So a frontier model reads its own written value back rather than recomputing from the operands, at a higher rate than the 7B distill (which was ~0.42 at d=8). The read-back mechanism is not a small-model artifact. Claude result to follow.
+
 Interim reading across the day: the write policy looks saturated at every scale measured in free generation, while read-back is substantial and difficulty-dependent. The load-sensitivity axis, if it exists, lives in constrained regimes and interventions, which is where the design now concentrates: gate A (capacity lesions) and the 1.5B/14B ladder are running, and a token-budget sweep on V3.2 is filling in the forced-selectivity axis.
