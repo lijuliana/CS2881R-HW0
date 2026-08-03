@@ -1,6 +1,6 @@
 # response to internal review (2026-08-02)
 
-An adversarial read of the synthesis and code came back with six substantive criticisms. Most are right. This file records what I accept, what I push back on, and the resulting change of plan. The short version: the behavioral results confirm known expressivity theory and cannot lead; the causal read-back mechanism, done cleanly, is the only genuinely new thing, so the project reorients around it.
+An adversarial read of the synthesis and code came back with six substantive criticisms. Most are right. This file records what I accept, what I push back on, and the resulting change of plan. The short version: the behavioral results confirm known expressivity theory and cannot lead; the causal read-back mechanism, done cleanly, is the only new thing, so the project reorients around it.
 
 ## accepted, changing the work
 
@@ -16,7 +16,7 @@ An adversarial read of the synthesis and code came back with six substantive cri
 
 ## partially pushed back
 
-6. **Novelty ceiling vs Merrill-Sabharwal.** Fair that the behavioral claims (one forward pass is roughly one serial op; serial needs writing, parallel does not) are the shadow of known theory. But the theory says CoT *can* provide serial steps; it does not say a trained reasoning model *does* route computation through the written token at value granularity, nor that it keeps a redundant internal copy, nor that written state is incompressible. Those are mechanistic facts about a specific trained system, not corollaries of an expressivity bound. The review agrees the causal read-back mechanism is genuinely new if executed cleanly. So the reorientation is not a retreat, it is putting the new thing in front and the confirmatory behavior behind it as context.
+6. **Novelty ceiling vs Merrill-Sabharwal.** Fair that the behavioral claims (one forward pass is roughly one serial op; serial needs writing, parallel does not) are the shadow of known theory. But the theory says CoT *can* provide serial steps; it does not say a trained reasoning model *does* route computation through the written token at value granularity, nor that it keeps a redundant internal copy, nor that written state is incompressible. Those are mechanistic facts about a specific trained system, not corollaries of an expressivity bound. The review agrees the causal read-back mechanism is new if executed cleanly. So the reorientation is not a retreat, it is putting the new thing in front and the confirmatory behavior behind it as context.
 
 ## revised priority order
 
