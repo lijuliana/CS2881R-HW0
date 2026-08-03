@@ -127,10 +127,10 @@ def continue_from(model, tok, ids, patch, max_new, n_samples):
                          pad_token_id=tok.eos_token_id)
     if patch is not None:
         patch.enabled = False
-    answers = [extract_answer(tok.decode(row[ids.shape[1]:],
-                                         skip_special_tokens=True), "cot")
-               for row in out]
-    return answers
+    texts = [tok.decode(row[ids.shape[1]:], skip_special_tokens=True)
+             for row in out]
+    answers = [extract_answer(t, "cot") for t in texts]
+    return answers, texts
 
 
 def main():
@@ -143,6 +143,7 @@ def main():
                     help="residual band to patch, inclusive")
     ap.add_argument("--delta", type=int, default=40)
     ap.add_argument("--max-new", type=int, default=400)
+    ap.add_argument("--debug", action="store_true")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
@@ -155,6 +156,7 @@ def main():
     model.eval()
     a, b = args.layers.split("-")
     layers = list(range(int(a), int(b) + 1))
+    is_reasoning = "r1" in args.model.lower() or "distill" in args.model.lower()
 
     def forward_answer(inst, idx, val):
         v = val
@@ -176,7 +178,7 @@ def main():
         if clean_ans == corr_ans:
             continue
 
-        prompt = build_prompt(inst, "cot", tok, True)
+        prompt = build_prompt(inst, "cot", tok, is_reasoning)
         text, ends, _ = build_trace(inst, write_target=True)
         # cut at the end of the target step line; the target value is the
         # final "= {clean_val}." of this prefix. Overwrite that specific
@@ -220,29 +222,33 @@ def main():
         base_patch = ResidualPatch(model, layers, clean_states, start, end)
         rand_patch = ResidualPatch(model, layers, rand_states, start, end)
 
-        corr_ans_gen = continue_from(model, tok, corr_ids.input_ids, None,
-                                     args.max_new, args.samples)
+        corr_ans_gen, corr_texts = continue_from(
+            model, tok, corr_ids.input_ids, None, args.max_new, args.samples)
         with base_patch:
-            patched = continue_from(model, tok, corr_ids.input_ids,
-                                    base_patch, args.max_new, args.samples)
+            patched, _ = continue_from(model, tok, corr_ids.input_ids,
+                                       base_patch, args.max_new, args.samples)
         with rand_patch:
-            randed = continue_from(model, tok, corr_ids.input_ids,
-                                   rand_patch, args.max_new, args.samples)
+            randed, _ = continue_from(model, tok, corr_ids.input_ids,
+                                      rand_patch, args.max_new, args.samples)
 
         def frac(ans_list, target):
             return sum(a == target for a in ans_list) / len(ans_list)
 
-        out.write(json.dumps({
+        rec = {
             "seed": inst.seed, "depth": args.depth, "target_step": tgt,
             "clean_val": clean_val, "corr_val": corr_val,
             "clean_ans": clean_ans, "corr_ans": corr_ans,
+            "corr_answers": corr_ans_gen,
             "corr_follows_corruption": frac(corr_ans_gen, corr_ans),
             "corr_follows_clean": frac(corr_ans_gen, clean_ans),
             "patched_follows_clean": frac(patched, clean_ans),
             "patched_follows_corruption": frac(patched, corr_ans),
             "rand_follows_clean": frac(randed, clean_ans),
             "rand_follows_corruption": frac(randed, corr_ans),
-        }) + "\n")
+        }
+        if args.debug:
+            rec["corr_text_sample"] = corr_texts[0][:600]
+        out.write(json.dumps(rec) + "\n")
         out.flush()
         kept += 1
         if kept % 20 == 0:
