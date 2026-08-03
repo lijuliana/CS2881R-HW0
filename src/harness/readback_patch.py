@@ -95,7 +95,9 @@ class ResidualPatch:
                 return output
             hs = hs.clone()
             lo, hi = self.start_pos, min(self.end_pos, seq, st.shape[0])
-            hs[0, lo:hi] = st[lo:hi].to(hs.dtype).to(hs.device)
+            # write the target states across every row of the batch (samples
+            # are batched via num_return_sequences)
+            hs[:, lo:hi] = st[lo:hi].to(hs.dtype).to(hs.device).unsqueeze(0)
             if isinstance(output, tuple):
                 return (hs,) + output[1:]
             return hs
@@ -114,17 +116,20 @@ def capture_states(model, ids, layers):
 
 @torch.no_grad()
 def continue_from(model, tok, ids, patch, max_new, n_samples):
-    answers = []
-    for _ in range(n_samples):
-        if patch is not None:
-            patch.enabled = True
-        out = model.generate(ids, max_new_tokens=max_new, do_sample=True,
-                             temperature=0.6, top_p=0.95,
-                             pad_token_id=tok.eos_token_id)
-        if patch is not None:
-            patch.enabled = False
-        txt = tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True)
-        answers.append(extract_answer(txt, "cot"))
+    # all samples in one batched call; the patch hook broadcasts its
+    # single-row states across the batch (hs[0] indexing replaced by a
+    # batch-wide write below), so we expand the patch to the batch size
+    if patch is not None:
+        patch.enabled = True
+    out = model.generate(ids, max_new_tokens=max_new, do_sample=True,
+                         temperature=0.6, top_p=0.95,
+                         num_return_sequences=n_samples,
+                         pad_token_id=tok.eos_token_id)
+    if patch is not None:
+        patch.enabled = False
+    answers = [extract_answer(tok.decode(row[ids.shape[1]:],
+                                         skip_special_tokens=True), "cot")
+               for row in out]
     return answers
 
 
