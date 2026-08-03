@@ -1,12 +1,3 @@
-# does internal pressure change writing
+# gate A: does internal pressure change writing (dropped)
 
-Question: lesion a mid-stack layer window during generation (resample ablation), vs a matched-damage control window. Does externalization move?
-
-Command:
-```
-python src/harness/gate_a_lesion.py --model <M> --family variable_chain --difficulty 8 \
-  --n 150 --alphas <doses> --target-layers 12-17 --control-layers 4-9 --out ...
-```
-KL to the clean model is logged per arm as the damage meter. Coarse doses overshot the accuracy cliff; a fine low-dose sweep resolves the sub-cliff regime.
-
-Read: arm x dose table of acc / ext / kl.
+Intended: lesion a mid-stack window during generation and check whether externalization rises (compensation). Dropped: the coarse dose sweep overshot the accuracy cliff, the write policy proved saturated so there was little compensation headroom to detect, and the question was superseded by the read-back patch (which gives the clean causal result). The lesion machinery (src/harness/gate_a_lesion.py) is reused by the protection experiment.
