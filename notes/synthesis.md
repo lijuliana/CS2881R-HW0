@@ -4,7 +4,7 @@ Living document. The claim, the evidence, the alternatives ruled out, and what i
 
 ## the claim
 
-For serial reasoning past a shallow internal-capacity limit, chain-of-thought is not a spillover buffer that models use under pressure. It is the medium the computation runs in. The residual stream is a wide but shallow workspace: it holds many values in parallel but cannot carry a chained result more than about one serial step without writing it down. So models write every intermediate of a serial chain, read those written values back to compute the next step, and keep a short-lived internal copy that verifies the written one. The token stream is the durable serial memory; the residual stream is a fast parallel register file and a verifier.
+For serial reasoning past a shallow internal-capacity limit, chain-of-thought is not a spillover buffer that models use under pressure. It is the medium the computation runs in. The residual stream is a wide but shallow workspace: it holds many values in parallel but cannot carry a chained result more than about one serial step without writing it down. So models write every intermediate of a serial chain and read those written values back, from the residual representation at the written token, to compute the next step. The token stream is the durable serial memory; the residual stream is a fast parallel register file whose serial depth is too shallow to hold a chain.
 
 This is sharper than the memory-hierarchy framing we started with, and in one respect it contradicts it. The starting hypothesis was that models externalize *when internal capacity is pressured*, implying a load-triggered onset. We do not find an onset. Externalization is saturated from the easiest problems at every scale and family we measured. The trade-off is not "internal until full, then external." It is "external for anything serial, internal for parallel storage and verification." The dividing line runs along the type of memory demand, not its amount.
 
@@ -14,7 +14,7 @@ This is sharper than the memory-hierarchy framing we started with, and in one re
 
 2. **Written values are read back.** Corrupting the last written mention of a mid-chain value flips the answer 31 to 50 percent of the time on variable chains, rising with difficulty (gate B, 2026-08-01). Rules out: the antagonist position that reasoning is latent and the trace is a projection (arXiv:2604.15726), which predicts near-zero flips. Refuted at 7B scale.
 
-3. **The internal copy persists and verifies.** Under the same corruption, the answer follows the clean value 48 to 68 percent of the time, and at high difficulty the model increasingly notices the edit and restates the clean value early (restates_clean 0.45 at d=32). Rules out: strict write-then-evict. The two tiers hold the value at once; the internal one checks the external one.
+3. **The forward computation reads the written representation.** On a non-reasoning model (Qwen2.5-7B-Instruct), corrupting a written value drives the corrupt answer without the model recomputing from the unchanged operands, and overwriting the residual at that token's position with the clean state flips the answer back to clean while the token stays corrupt, a matched-norm random patch having no effect (patch experiment, 8-item pilot clean, full run pending). This localizes read-back to the residual representation at the written token. The reasoning model's high follows-clean share under corruption (48 to 68 percent in gate B) is explained by a separate diagnostic: inside the think block the corrupted value propagates, but the post-think answer section re-solves the problem. We do not claim a dedicated verification mechanism; that earlier reading rested on one over-interpreted difficulty point and is dropped.
 
 4. **Written values are incompressible.** Under token budgets, prose compresses up to 2.5x with accuracy intact, but externalization fraction stays at 0.98 to 1.00; below ~12 tokens per step the model truncates and fails rather than dropping values or moving computation inward (budget sweep, 2026-08-01). Rules out: values as optional verbosity. They behave like load-bearing cargo.
 
@@ -31,7 +31,7 @@ Because externalization has no onset, the fittable quantity is the internal seri
 ## what would still change the picture
 
 - Gate A (running): if sub-cliff internal lesions *do* shift writing, clause "no load-triggered onset" needs qualifying: the onset may exist but sit below the easiest task we used. If lesions only degrade, the saturation picture holds.
-- Eviction probe (running): clause 3 predicts written-value decodability at current position stays at or above the suppressed variant (redundant cache). A negative gap would revive eviction and complicate the verifier story.
+- Layer-band patch sweep (running): patching early vs mid vs late layers localizes which depths carry the read-back. If only mid and late bands revert the answer, the value is read from processed representations, not the raw token embedding.
 - Protection experiment (running): the differential prediction is that internal lesions hurt entity tracking more than variable chains, and CoT protects chains more than boxes. That is the causal test of clause 6, the strongest single claim.
 
 ## novelty position
