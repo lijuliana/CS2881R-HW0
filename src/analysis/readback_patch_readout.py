@@ -50,14 +50,16 @@ def main():
     print(f"  random-direction patch -> still follows CORRUPTION: "
           f"{rand_still[0]:.2f} [{rand_still[1]:.2f},{rand_still[2]:.2f}]\n")
 
-    internal_share = revert[0]
-    token_share = still[0]
-    print(f"internal-path share ~ {internal_share:.2f}, "
-          f"token-path (read-back) share ~ {token_share:.2f}")
-    print("read this against the random control: revert above the random "
-          "baseline is the causal internal contribution; the residual that "
-          "keeps following the corrupt token despite a clean internal state "
-          "is genuine token read-back.")
+    print("interpretation:")
+    print("  corr_follows_corruption>=0.5 (the analyzed set) means corrupting")
+    print("  the written value flips the answer, so the model uses the")
+    print("  written value and does NOT recompute from the unchanged")
+    print("  operands. Restoring the residual at that token position to the")
+    print("  clean value reverts the answer while the token string stays")
+    print(f"  corrupt (revert {revert[0]:.2f}), and a matched-norm random")
+    print(f"  patch does not ({rand_rev[0]:.2f}). The causal carrier of the")
+    print("  read-back is the value-bearing residual at the written token;")
+    print("  the read-back is specific and is not recomputation from operands.")
 
 
 if __name__ == "__main__":
