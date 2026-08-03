@@ -201,8 +201,36 @@ def fig_readback_patch():
     plt.close(fig)
 
 
+def fig_protection():
+    """Serial/parallel dissociation: internal-lesion cot accuracy drop,
+    entity tracking vs variable chains, at headroom difficulties."""
+    import json as _json
+    from collections import defaultdict as _dd
+    def drops(path):
+        rows=[_json.loads(l) for l in open(path)]
+        c=_dd(list)
+        for r in rows: c[(r["arm"],r["difficulty"],r["condition"])].append(r["correct"])
+        out={}
+        for d in [2,4,8,16]:
+            base=np.mean(c[("clean",d,"cot")])
+            out[d]=base-np.mean(c[("target",d,"cot")])
+        return out
+    e=drops(f"{RAW}/protection_ent_7b_fix10.jsonl")
+    v=drops(f"{RAW}/protection_var_7b_fix10.jsonl")
+    ds=[2,4,8,16]
+    x=np.arange(len(ds)); w=0.35
+    fig,ax=plt.subplots(figsize=(6,4))
+    ax.bar(x-w/2,[e[d] for d in ds],w,label="entity tracking (internal state)",color="C3")
+    ax.bar(x+w/2,[v[d] for d in ds],w,label="variable chains (external state)",color="C0")
+    ax.set_xticks(x); ax.set_xticklabels([f"d={d}" for d in ds])
+    ax.set_ylabel("cot accuracy drop under internal lesion")
+    ax.set_title("internal lesion hurts parallel storage more than serial chains\n(where both have headroom: d=2,4)")
+    ax.legend(fontsize=8)
+    fig.tight_layout(); fig.savefig(f"{OUT}/protection.png",dpi=150); plt.close(fig)
+
+
 if __name__ == "__main__":
-    for fn in [fig_necessity, fig_readback, fig_budget, fig_format, fig_readback_patch]:
+    for fn in [fig_necessity, fig_readback, fig_budget, fig_format, fig_readback_patch, fig_protection]:
         try:
             fn()
             print(f"{fn.__name__} ok")

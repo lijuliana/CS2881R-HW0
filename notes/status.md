@@ -2,9 +2,9 @@
 
 Snapshot of what is done and what remains. Percentages are honest estimates of completion, weighted by importance.
 
-## overall: ~90 percent
+## overall: ~96 percent
 
-The novel causal contribution (read-back mechanism) is complete and defensible. One causal experiment (the protection dissociation) is finishing, and the paper needs its final section filled and a closing pass. Nothing structural remains.
+The novel causal contribution (read-back mechanism) is complete and defensible, and the protection dissociation is now in with a corrected lesion and an honest moderate-support result. All experiments are done; the paper has all sections filled and needs only a final coherence and wording pass.
 
 ## experiments
 
@@ -17,7 +17,7 @@ The novel causal contribution (read-back mechanism) is complete and defensible. 
 | 5 | budget sweep (incompressibility) | are written values droppable under pressure | complete, prose compresses 2.5x, values never drop | 100% |
 | 6 | serial/parallel dissociation (behavioral) | does externalization predict serial success but not parallel | complete | 100% |
 | 7 | format geometry | which scratchpad format is the efficient memory | complete, code_eval optimum, +0.74 dose-response | 100% |
-| 8 | protection dissociation (causal) | do internal lesions hurt parallel storage more than serial chains | reworked after review: lesion now fires during prefill so both conditions face the same squeeze, KL measured on neutral text; rerunning at alpha 0.10 on both families | 55% |
+| 8 | protection dissociation (causal) | do internal lesions hurt parallel storage more than serial chains | complete (corrected lesion): internal lesion hurts entity ~3x more than chains where both have headroom, robust to layer window; blunt-lesion caveat at high d reported honestly | 100% |
 | 9 | capacity variance across models | how deep a chain fits in one forward pass | complete, demoted to open question (depth/params collinear) | 100% |
 | 10 | reasoning-model think/post-think diagnostic | why the reasoning model reverts to clean under corruption | complete, logged as a finding | 100% |
 | - | gate A capacity lesion (compensation) | does internal pressure induce extra writing | dropped: coarse dose overshot the cliff, lower value, superseded by patch result | n/a |
