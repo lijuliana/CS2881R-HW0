@@ -45,9 +45,14 @@ def build_prompt(inst, condition, tokenizer, is_reasoning_model):
 
 def extract_answer(text, condition):
     body = re.split(r"</think>", text)[-1]
-    m = re.findall(r"[Aa]nswer\s*[:=]?\s*(-?[\w.]+)", body)
+    boxed = re.findall(r"\\boxed\{(-?[\w.,]+)\}", body)
+    if boxed:
+        return boxed[-1].replace(",", "").rstrip(".")
+    m = re.findall(r"[Aa]nswer\s*(?:is)?\s*[:=]?\s*\$?(-?[\d][\d.,]*|\w+)",
+                   body)
+    m = [x for x in m if x.lower() not in ("is", "the", "a")]
     if m:
-        return m[-1].rstrip(".")
+        return m[-1].replace(",", "").rstrip(".")
     tokens = re.findall(r"-?\d+|\b\w+\b", body.strip())
     return tokens[-1] if tokens else ""
 
