@@ -31,12 +31,17 @@ class WindowLesion:
     blends the layer output toward a resample bank vector: h <- (1-a)h + a r.
     Only positions past the prompt are touched."""
 
-    def __init__(self, model, layers, alpha, bank):
+    def __init__(self, model, layers, alpha, bank, lesion_prefill=False):
         self.model = model
         self.layers = layers
         self.alpha = alpha
         self.bank = bank  # dict layer -> tensor [n_bank, d]
         self.prompt_len = None
+        # when True the lesion also fires during prefill (seq>1), so the
+        # direct condition (whose computation is at prefill) faces the same
+        # internal squeeze as cot; without this the two conditions get
+        # different interventions and cot-vs-direct is not a protection test
+        self.lesion_prefill = lesion_prefill
         self.handles = []
         self.enabled = False
 
@@ -52,11 +57,23 @@ class WindowLesion:
             if not self.enabled:
                 return output
             hs = output[0] if isinstance(output, tuple) else output
-            # during decode, seq len 1: everything past prompt is reasoning
-            if hs.shape[1] == 1:
-                r = self.bank[li][torch.randint(len(self.bank[li]), (hs.shape[0],))]
+            seq = hs.shape[1]
+            if seq == 1:
+                # decode step: blend the single new position
+                r = self.bank[li][torch.randint(len(self.bank[li]),
+                                                (hs.shape[0],))]
                 r = r.to(hs.dtype).to(hs.device).unsqueeze(1)
                 mixed = (1 - self.alpha) * hs + self.alpha * r
+                if isinstance(output, tuple):
+                    return (mixed,) + output[1:]
+                return mixed
+            if self.lesion_prefill and seq > 1:
+                # prefill: blend every position so the direct condition's
+                # prompt-time computation is squeezed the same as cot's
+                idx = torch.randint(len(self.bank[li]), (seq,))
+                r = self.bank[li][idx].to(hs.dtype).to(hs.device)
+                mixed = hs.clone()
+                mixed[0] = (1 - self.alpha) * hs[0] + self.alpha * r
                 if isinstance(output, tuple):
                     return (mixed,) + output[1:]
                 return mixed

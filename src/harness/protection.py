@@ -28,6 +28,26 @@ from harness.gate_a_lesion import (WindowLesion, build_bank,  # noqa: E402
                                    generate_with_lesion, measure_damage)
 
 
+NEUTRAL_TEXTS = [
+    "The city grew slowly over several centuries, and its streets still "
+    "follow the paths that farmers once walked between their fields.",
+    "Water expands as it freezes, which is why pipes can burst in winter "
+    "when the temperature drops below the freezing point for long enough.",
+    "She opened the window to let in the morning air, then sat down at the "
+    "desk and began to read the letters that had arrived the day before.",
+    "The orchestra tuned their instruments while the audience found their "
+    "seats, and a hush settled over the hall as the conductor walked out.",
+    "Trade routes across the desert depended on wells that were spaced a "
+    "day's travel apart, and caravans planned their journeys around them.",
+    "The recipe called for folding the egg whites gently into the batter "
+    "so that the air stayed trapped and the cake would rise in the oven.",
+    "After the storm passed, the villagers walked down to the shore to see "
+    "what the waves had left behind on the sand and among the rocks.",
+    "He kept a notebook of the birds he saw each spring, noting the date "
+    "and the weather so he could compare the seasons from year to year.",
+]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
@@ -63,18 +83,26 @@ def main():
     bank_prompts = [build_prompt(gen(max(diffs), 10_000 + s), "cot",
                                  tok, True) for s in range(16)]
     bank = build_bank(model, tok, bank_prompts, all_layers, device)
-    damage_texts = bank_prompts[:8]
+    # damage meter on NEUTRAL text, not task prompts: on-task KL folds the
+    # targeted effect into the meter (the target window is more task-critical)
+    # and would under-dose the target arm at matched KL. We report both.
+    neutral_texts = NEUTRAL_TEXTS
+    task_texts = bank_prompts[:8]
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as f:
         for arm, layers in arms.items():
             lesion = WindowLesion(model, layers or [],
                                   0.0 if layers is None else args.alpha,
-                                  bank)
+                                  bank, lesion_prefill=True)
             with lesion:
-                kl = 0.0 if layers is None else measure_damage(
-                    model, tok, damage_texts, lesion, device)
-                print(f"arm={arm} kl={kl:.4f}", flush=True)
+                kl_neutral = 0.0 if layers is None else measure_damage(
+                    model, tok, neutral_texts, lesion, device)
+                kl_task = 0.0 if layers is None else measure_damage(
+                    model, tok, task_texts, lesion, device)
+                kl = kl_neutral
+                print(f"arm={arm} kl_neutral={kl_neutral:.4f} "
+                      f"kl_task={kl_task:.4f}", flush=True)
                 for d in diffs:
                     for cond in ["direct", "cot"]:
                         for s in range(args.n):
@@ -86,7 +114,9 @@ def main():
                                 device)
                             pred = extract_answer(trace, cond)
                             f.write(json.dumps({
-                                "arm": arm, "alpha": lesion.alpha, "kl": kl,
+                                "arm": arm, "alpha": lesion.alpha,
+                                "kl": kl, "kl_neutral": kl_neutral,
+                                "kl_task": kl_task,
                                 "condition": cond, "difficulty": d,
                                 "seed": s,
                                 "correct": pred.strip().lower()
