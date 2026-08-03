@@ -229,8 +229,30 @@ def fig_protection():
     fig.tight_layout(); fig.savefig(f"{OUT}/protection.png",dpi=150); plt.close(fig)
 
 
+def fig_frontier_readback():
+    """Read-back reliability rises with model capability."""
+    import json as _json
+    pts=[("7B distill",0.42),("V3.2 671B",None),("Sonnet 4.5",None)]
+    vals={}
+    for tag,f in [("V3.2 671B","apirb_v32_d10"),("Sonnet 4.5","apirb_sonnet_d10")]:
+        try:
+            rows=[_json.loads(l) for l in open(f"{RAW}/{f}.jsonl")]
+            vals[tag]=np.mean([r["follows_corruption"] for r in rows])
+        except FileNotFoundError:
+            return
+    labels=["7B distill\n(gate B, d=8)","V3.2 671B\n(d=10)","Sonnet 4.5\n(d=10)"]
+    y=[0.42,vals["V3.2 671B"],vals["Sonnet 4.5"]]
+    fig,ax=plt.subplots(figsize=(6,4))
+    ax.bar(labels,y,color=["C0","C1","C2"])
+    ax.set_ylabel("fraction where corrupting a written\nvalue flips the answer")
+    ax.set_ylim(0,1)
+    ax.set_title("read-back reliability rises with capability")
+    for i,v in enumerate(y): ax.text(i,v+0.02,f"{v:.2f}",ha="center")
+    fig.tight_layout(); fig.savefig(f"{OUT}/frontier_readback.png",dpi=150); plt.close(fig)
+
+
 if __name__ == "__main__":
-    for fn in [fig_necessity, fig_readback, fig_budget, fig_format, fig_readback_patch, fig_protection]:
+    for fn in [fig_necessity, fig_readback, fig_budget, fig_format, fig_readback_patch, fig_protection, fig_frontier_readback]:
         try:
             fn()
             print(f"{fn.__name__} ok")
