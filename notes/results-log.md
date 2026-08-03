@@ -44,4 +44,10 @@ Found via Llama 70B spot-check: traces ending "The final answer is: $\boxed{X}$"
 
 Cross-family (Llama 3.1-8B, 3.3-70B, variable chains): 70B free is perfect through d=48; 8B holds 0.93 at d=48. The notable number is the direct cliff: 70B holds 0.93 direct accuracy at d=4 and collapses at d=8, while every other model measured (including R1-671B and V3.2) collapses at d=1 to 2. First clear cross-model variance in internal serial capacity, giving the onset law real variance to fit. Externalization in free generation is at ceiling for both Llamas, matching the saturation picture; the models that need less writing do not write less.
 
+## 2026-08-02, internal serial capacity, Llama depth ladder
+
+Direct-condition d_int (largest depth with >=0.5 no-CoT accuracy) across Llama 3.x: 1B=0, 3B=0, 8B=1.9, 11B=0, 70B=5.4. Within this family depth and log-params correlate with d_int at 0.90 and 0.84, so they are collinear and the ladder cannot separate them. Two honest caveats: the 11B is the vision-augmented model and reads as an anomaly (0, below the 8B), and small models failing at d=1 means one in-context +/- step already exceeds their reliable no-CoT capacity.
+
+Correction to the earlier depth-not-params note: the only evidence pointing to depth over params is the cross-family contrast, Llama-70B (80 layers, 70B) reaches d_int~5 while DeepSeek V3.2 and R1-671B (61 layers, 671B) sit near the floor. That is suggestive but confounded by architecture family and training regime, so the capacity law is downgraded from a claim to an open question. What would settle it: a set matched on parameter count but varying depth (looped or depth-scaled transformers), which we do not have. Recorded so the writeup does not overclaim.
+
 Interim reading across the day: the write policy looks saturated at every scale measured in free generation, while read-back is substantial and difficulty-dependent. The load-sensitivity axis, if it exists, lives in constrained regimes and interventions, which is where the design now concentrates: gate A (capacity lesions) and the 1.5B/14B ladder are running, and a token-budget sweep on V3.2 is filling in the forced-selectivity axis.

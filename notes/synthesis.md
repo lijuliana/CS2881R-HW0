@@ -24,7 +24,7 @@ This is sharper than the memory-hierarchy framing we started with, and in one re
 
 ## the law
 
-Because externalization has no onset, the fittable quantity is the internal serial capacity itself: d_int, the depth a model completes without writing. Early evidence (capacity_law.py, variable chains) is that d_int tracks layer count, not parameters (corr with depth positive, with log-params null), consistent with depth being the serial-step budget. The Llama depth ladder (1B to 70B, one architecture) is running to turn this from an ordinal observation into a within-family fit. If d_int scales with depth and not width across a clean ladder, that is the paper's quantitative law and it is the theory-predicted one.
+Because externalization has no onset, the fittable quantity is the internal serial capacity itself: d_int, the depth a model completes without writing. It varies across models (Llama-70B reaches ~5 serial steps; the distills and the DeepSeek pair sit at 1-2). But the depth-vs-params question is not resolvable with the models we have: within the Llama family depth and log-params are collinear (both correlate ~0.85-0.90 with d_int), and the one contrast that points to depth, 80-layer Llama-70B beating 61-layer 671B DeepSeek, is confounded by family and training. So the honest statement is: internal serial capacity is real, small, and model-dependent, and whether depth or scale sets it is open. Settling it needs a param-matched depth-varying set (looped or depth-scaled transformers) we do not have. This is filed as an open question, not a claimed law, so the paper does not rest on it.
 
 ## what would still change the picture
 
