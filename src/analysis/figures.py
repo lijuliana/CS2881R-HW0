@@ -159,8 +159,50 @@ def fig_format():
     plt.close(fig)
 
 
+def fig_readback_patch():
+    """Residual patch decomposition: without patching the corrupt token drives
+    the corrupt answer; restoring the clean residual reverts to clean; a
+    matched-norm random patch does not. Bars with bootstrap CIs."""
+    import json as _json
+    import glob as _glob
+    files = sorted(_glob.glob(f"{RAW}/readback_patch_qwen7b_d*.jsonl"))
+    files = [f for f in files if "_L" not in f]
+    if not files:
+        return
+    rows = []
+    for f in files:
+        rows += [_json.loads(l) for l in open(f)]
+    eff = [r for r in rows if r["corr_follows_corruption"] >= 0.5]
+    if not eff:
+        return
+
+    def bootci(vals):
+        v = np.asarray(vals, float)
+        rng = np.random.default_rng(0)
+        m = rng.choice(v, (2000, len(v))).mean(1)
+        return v.mean(), np.percentile(m, 2.5), np.percentile(m, 97.5)
+    labels = ["no patch\n(corrupt)", "restore clean\nresidual",
+              "random\ncontrol"]
+    keys = [("corr_follows_clean",), ("patched_follows_clean",),
+            ("rand_follows_clean",)]
+    means, los, his = [], [], []
+    for (k,) in keys:
+        m, lo, hi = bootci([r[k] for r in eff])
+        means.append(m); los.append(m - lo); his.append(hi - m)
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.bar(labels, means, yerr=[los, his], capsize=5,
+           color=["C3", "C0", "C7"])
+    ax.set_ylabel("fraction following the CLEAN answer")
+    ax.set_title("restoring the clean residual reverts the answer\n"
+                 f"(token stays corrupt; n={len(eff)} items with an effect)")
+    ax.set_ylim(0, 1)
+    fig.tight_layout()
+    fig.savefig(f"{OUT}/readback_patch.png", dpi=150)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
-    for fn in [fig_necessity, fig_readback, fig_budget, fig_format]:
+    for fn in [fig_necessity, fig_readback, fig_budget, fig_format, fig_readback_patch]:
         try:
             fn()
             print(f"{fn.__name__} ok")
