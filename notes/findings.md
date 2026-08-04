@@ -1,171 +1,92 @@
 # Findings summary
 
-## Research question
+Research question: When does a model maintain intermediate reasoning state internally, in its activations, and when does it write that state into its chain of thought? Does this allocation change as problems become harder or as either channel is constrained?
 
-When does a model maintain intermediate reasoning state internally, in its activations, and when does it write that state into its chain of thought? Does this allocation change as problems become harder or as either channel is constrained?
+Terms used throughout:
 
-## Terms
+* **Internal workspace**: the model's activations during a forward pass. Always present, cannot be switched off; interventions can damage it (lesion) or overwrite parts of it (patch).
+* **Token channel**: the chain-of-thought text written before the answer. Can be closed (force a bare answer), capped (token budget), or edited (corrupt a written value).
+* **d**: difficulty, the number of dependent steps in a synthetic problem (chained arithmetic, variable chains, box tracking). Every intermediate value has known ground truth.
+* **Externalization**: fraction of those ground-truth values that appear in the written trace.
 
-* **Internal workspace:** The model’s activations during a forward pass. This workspace is always present and cannot be disabled directly. It can, however, be damaged through a lesion or partially overwritten through activation patching.
-* **Token channel:** The chain-of-thought text generated before the final answer. This channel can be closed by requiring a bare answer, constrained with a token budget, or edited by corrupting a written intermediate value.
-* **Difficulty (d):** The number of dependent steps in a synthetic reasoning problem, including chained arithmetic, variable chains, and box tracking. The ground-truth intermediate state is known at every step.
-* **Externalization:** The fraction of ground-truth intermediate values that appear explicitly in the generated trace.
+Each finding states what was varied, what was measured, and the result.
 
-# Main findings
+## Main findings
 
-## 1. Externalization is saturated from the easiest problems onward
+### 1. Externalization is saturated from the easiest problems onward
 
-**Varied:** Difficulty from (d=1) to (d=64), and model size from 1.5B to 671B parameters.
+Varied: d from 1 to 64, model size 1.5B to 671B. Measured: externalization in free generation.
 
-**Measured:** The fraction of ground-truth intermediate values written during free generation.
+Result: 0.93 to 1.00 everywhere, including d=1. No model waits for difficulty before writing intermediate values; there is no spill threshold where internal reasoning gives way to writing. The write policy is saturated from the start.
 
-**Result:** Externalization remains between 0.93 and 1.00 across the full difficulty range, including at (d=1). No model waits for the problem to become difficult before beginning to write intermediate values.
+### 2. Models cannot replace the token channel with internal computation
 
-**Interpretation:** We find no evidence for a spill threshold at which a model initially reasons internally and begins externalizing only after its internal workspace is exhausted. The default write policy is already near saturation at the lowest tested difficulty.
+Varied: token channel open vs closed (closed = instructed to output only the final answer, zero reasoning tokens). Measured: accuracy vs serial depth.
 
-## 2. Models do not successfully replace the token channel with internal computation
+Result: accuracy collapses past one dependent operation. DeepSeek V3.2 (671B) gets 23 percent at d=1 and near zero above. With finding 1, this rules out the overflow picture: writing is not what happens when a sufficient workspace fills up, because a single forward pass never fit a chain in the first place. Read behaviorally, not as proof of zero latent serial capacity; the direct condition also carries prompting and training-distribution effects.
 
-**Varied:** Token channel available versus closed. In the closed condition, the model is instructed to produce only the final answer, with no reasoning tokens generated.
+### 3. Subsequent computation follows edited written values
 
-**Measured:** Final-answer accuracy as serial depth increases.
+Varied: one written intermediate value in a valid trace replaced with a counterfactual (417 to 457, say), model continues from the edit. Measured: whether the answer matches the clean value, the edited value, or neither.
 
-**Result:** Accuracy collapses rapidly once problems require more than one dependent operation. DeepSeek V3.2 achieves 23% accuracy at (d=1) and approaches zero at greater depths.
+Result: the answer follows the edit on 84 percent of items (Qwen2.5-7B-Instruct, d=10, n=141). Most of the rest follow neither (later arithmetic slips). Almost none recover the original from the unchanged earlier steps, which are still in context. The written value is not a record of computation done elsewhere; later computation depends on it.
 
-**Interpretation:** Under the tested direct-answer condition, the models do not preserve performance by moving the serial computation into a single forward pass. Together with Finding 1, this argues against a simple overflow account in which the model writes only after an initially sufficient internal workspace fills up.
+### 4. Restoring clean internal state at the corrupted token restores the clean answer
 
-This result should be interpreted behaviorally rather than as a strict proof that the model has no latent serial capacity. The direct-answer condition may also reflect prompting, training-distribution, or answer-production effects.
+Varied: token text stays corrupted, but the residual-stream state at that position is overwritten with the clean state from the uncorrupted run; control arm gets a matched-norm random perturbation. Measured: whether the continuation returns to the clean answer.
 
-## 3. Subsequent computation follows edited written values
+Result: restoration reverts the answer on 97 percent of affected items (CI 94 to 99); the random control reverts 0 percent; replicates at d=20 (93 percent). The value is read out of the residual state at the written token, causally and specifically. Caveat: the patch restores the full residual state at that position, so it does not isolate the numerical value from everything else represented there.
 
-**Varied:** One intermediate value in an otherwise valid worked trace is replaced with a counterfactual value—for example, changing 417 to 457—after which the model continues from the edited trace.
+### 5. Read-back strengthens, not weakens, with model capability
 
-**Measured:** Whether the final answer is consistent with the clean trace, the edited value, or neither.
+Varied: model, same corruption test via API prefill. Measured: fraction of answers following the edit.
 
-**Result:** On Qwen2.5-7B-Instruct at (d=10), the final answer follows the edited value on 84% of 141 items. Most remaining examples follow neither answer because of subsequent arithmetic errors. Almost none recover the original value from the unchanged earlier steps.
+Result: 42 percent (7B distill), 78 percent (DeepSeek V3.2), 97 percent (Claude Sonnet 4.5). The opposite of the intuition that stronger models keep more in their heads: the written trace stays load-bearing at the frontier, which matters for monitoring. Not a causal effect of scale, since these models differ in architecture, training, and serving.
 
-**Interpretation:** The written intermediate value is not merely a record of an independently completed computation. Later computation causally depends on the state introduced at that point in the trace.
+### 6. Under token pressure, prose goes first and values never go
 
-## 4. Clean internal state at the corrupted token position restores the clean continuation
+Varied: hard output budgets 64 to 512 tokens vs unrestricted. Measured: trace length, externalization, accuracy.
 
-**Varied:** The written value remains visibly corrupted, but the residual-stream state at that token position is replaced with the clean state recorded from the uncorrupted run. A control condition applies a random perturbation with matched norm.
+Result: V3.2 at d=16 compresses traces 466 to 184 tokens with accuracy intact (0.93 to 0.97) and externalization still 0.98 to 1.00. Below roughly twelve tokens per step the model does not drop values and hold them internally; it truncates and accuracy falls to zero. Written values behave like incompressible cargo, not narration. The floor is task- and model-specific, not a universal limit.
 
-**Measured:** Whether the continuation returns to the clean answer.
+### 7. Serial and parallel memory demands externalize differently
 
-**Result:** Among examples whose answers were changed by the corruption, restoring the clean residual state returns the answer to the clean value on 97% of items, with a 95% confidence interval of 94–99%. The matched random perturbation restores 0%. At (d=20), clean-state restoration succeeds on 93% of affected items.
+Varied: task structure, serial (each value depends on the previous) vs parallel (five boxes, contents repeatedly swapped). Measured: externalization among correct traces.
 
-**Interpretation:** Causally relevant information is represented at the written value’s token position and is reused by later computation. The effect is specific to restoring the clean state rather than to perturbing the model generically.
+Result: serial chains at d of 16 and up, externalization is exactly 1.00 in every correct trace (n=1935 pooled across three model sizes); box tracking, the model handles sixteen swaps correctly while writing about a fifth of the state. What stays internal is set by the structure of the memory demand, not the amount: serial state lives on the page, parallel state can live in activations. The families differ in more than seriality, so this is evidence for a structural split, not a separation theorem.
 
-Because the intervention restores the full residual state at that position, it does not yet isolate the numerical value from all other contextual information represented there.
+### 8. Activation lesions hurt the parallel task about three times more
 
-## 5. Behavioral read-back persists in larger and more capable models
+Varied: matched-dose residual-stream lesion during generation, both task types, chain of thought available. Measured: accuracy drop.
 
-**Varied:** Model, using the same behavioral corruption test through API prefill.
+Result: box tracking falls 0.34, variable chains 0.11 (d=2 to 4, n=40 per cell). The task whose state is less externalized is the one fragile to internal damage, the causal counterpart of finding 7. The lesion is blunt (it also disrupts re-reading of written values), so this is supporting evidence, not a clean separation of the two channels.
 
-**Measured:** The fraction of final answers that follow the edited intermediate value.
+## Negative and null results
 
-**Result:**
+### N1. The starting hypothesis is not supported
 
-* 7B reasoning distill: 42%
-* DeepSeek V3.2: 78%
-* Claude Sonnet 4.5: 97%
+The initial hypothesis, written down before any runs, was that models reason internally at low difficulty and start externalizing once capacity is exceeded. Findings 1 and 2 contradict it: writing is saturated at d=1, and closing the token channel reveals no low-difficulty internal regime to fall back on.
 
-**Interpretation:** Dependence on written intermediate state is not confined to the white-box 7B model. Strong corruption-following behavior also appears in the tested frontier systems.
+### N2. Damaging the workspace does not induce more writing
 
-These comparisons do not establish a causal effect of scale, because the models differ in architecture, training, family, and serving setup.
+If externalization were an online response to internal scarcity, induced scarcity should induce writing. It does not: as lesion strength crosses the accuracy cliff (0.99 clean to 0.01 lesioned), externalization falls and traces disintegrate. No sign the write policy adapts.
 
-## 6. Under token pressure, models remove prose before intermediate values
+### N3. Restricting the token channel does not induce internalization
 
-**Varied:** Hard output budgets from 64 to 512 tokens, compared with unrestricted generation.
+The mirror test of N2. Under hard budgets the model compresses prose while keeping every value; below the floor it truncates and fails rather than holding values internally. Together with N2: no evidence of adaptive movement of state between channels at inference time.
 
-**Measured:** Trace length, externalization, and accuracy.
+### N4. Naive corruption tests are confounded in reasoning models
 
-**Result:** On DeepSeek V3.2 at (d=16), the model compresses traces from approximately 466 tokens to 184 tokens while preserving accuracy between 0.93 and 0.97. Externalization remains between 0.98 and 1.00. Below approximately twelve tokens per reasoning step, traces truncate and accuracy falls to zero.
+Corrupt a value inside a think block and it propagates through the reasoning, but the answer section may then re-solve the problem from the prompt, so the final answer returns to clean even though the corrupted value was used. This masks read-back when only the answer is measured, and is why findings 3 and 4 use a non-reasoning model that continues a worked trace straight to the answer.
 
-**Interpretation:** Intermediate values are more resistant to compression than the surrounding prose. When the token budget becomes too small, the model does not preserve performance by omitting written values and maintaining them internally. Instead, the trace breaks down.
+### N5. Returns to the clean answer do not establish a persistent internal copy
 
-The observed floor is specific to the tested task and model and should not be treated as a universal information-theoretic limit.
+An earlier reading treated a 0.48 to 0.68 clean-return rate after corruption as evidence of an uncorrupted internal copy. Not identified: the full problem stays in context, so re-derivation from the prompt predicts the same behavior. Whether an internal copy survives writing remains undetermined, and no internal-copy claim is made.
 
-## 7. Externalization differs between serial and parallel memory demands
+## Known limitations
 
-**Varied:** Task structure.
-
-* **Serial:** Each intermediate value depends on the preceding value.
-* **Parallel:** The model tracks the contents of five boxes while their contents are repeatedly swapped.
-
-**Measured:** Externalization among correct traces.
-
-**Result:** On serial variable chains at (d \geq 16), externalization is exactly 1.00 for every correct trace across the three tested distill models, with (n=1{,}935) pooled examples. On box tracking, the model can correctly process sixteen swaps while explicitly writing only about one fifth of the task state.
-
-**Interpretation:** Serial dependency chains rely heavily on explicitly written intermediate state, whereas substantial parallel state can remain implicit in activations. The relevant distinction appears to be the structure of the memory demand rather than simply the total amount of information involved.
-
-Because the task families differ in more than seriality alone, this should be treated as evidence for a structural distinction rather than as a complete separation theorem.
-
-## 8. Activation lesions affect the parallel task more strongly
-
-**Varied:** A matched-dose lesion applied to the residual stream during generation on both serial chains and box tracking.
-
-**Measured:** Accuracy reduction with chain of thought available.
-
-**Result:** At (d=2) to (d=4), box-tracking accuracy falls by 0.34, while variable-chain accuracy falls by 0.11, with (n=40) per cell.
-
-**Interpretation:** The task whose state is less fully externalized is approximately three times more sensitive to activation damage. This is consistent with box tracking depending more heavily on internally maintained state, while serial chains retain some robustness because their intermediate values are also available in the written trace.
-
-The lesion is blunt and also disrupts the processing and re-reading of written values. This result is therefore supporting evidence for the serial–parallel distinction rather than a clean causal separation of the two memory channels.
-
-# Negative and null results
-
-## N1. The original spill-threshold hypothesis is not supported
-
-The preregistered or initial hypothesis was that models would reason internally at low difficulty and begin externalizing once internal capacity was exceeded.
-
-Findings 1 and 2 contradict that account. Externalization is already saturated at (d=1), while closing the token channel produces poor serial performance rather than revealing a substantial low-difficulty internal regime.
-
-## N2. Damaging the internal workspace does not induce additional writing
-
-If externalization were an online response to internal scarcity, damaging the activation workspace should cause the model to write more state into the trace.
-
-This does not occur. As lesion strength increases from a regime with approximately 0.99 clean accuracy to one with approximately 0.01 lesioned accuracy, externalization falls and traces become disorganized. The model shows no evidence of compensating for activation damage by increasing its use of the token channel.
-
-## N3. Restricting the token channel does not induce successful internalization
-
-The mirror prediction is that limiting available reasoning tokens should cause the model to retain more intermediate state internally.
-
-This also does not occur. Under hard token limits, the model first compresses prose while preserving intermediate values. Below the observed budget floor, it truncates and fails rather than omitting values while preserving the computation internally.
-
-Together, N2 and N3 provide no evidence for adaptive movement of reasoning state between the two channels during inference.
-
-## N4. Naive final-answer corruption tests are confounded in reasoning models
-
-When a written value is corrupted inside a reasoning model’s think block, the corrupted value propagates through the remaining reasoning. However, the final answer section may then solve the original problem again from the prompt.
-
-As a result, the final answer can return to the clean value even though the corrupted value was used during the reasoning trace. This masks read-back when only the final answer is measured.
-
-This confound motivates the use of Qwen2.5-7B-Instruct for Findings 3 and 4: it continues a worked trace directly to the answer without a separate post-reasoning re-derivation phase.
-
-## N5. Returns to the clean answer do not establish a persistent internal copy
-
-An earlier interpretation treated a 0.48–0.68 rate of returning to the clean answer after corruption as evidence that the model retained an uncorrupted internal copy.
-
-That interpretation is not identified. Because the complete original problem remains in context, the model can instead re-derive the answer from the prompt. The current results therefore make no claim that a persistent clean internal copy survives after the written value is corrupted.
-
-# Known limitations
-
-## Residual lesion
-
-Finding 8 currently uses one model, one lesion dose, and (n=40) examples per cell. The lesion also interferes with re-reading written values, so the comparison is most interpretable at low-to-moderate difficulty, before either task reaches an accuracy floor.
-
-## Token-budget experiment
-
-Finding 6 currently covers one model family. The model is informed of the output cap, so failure under tight budgets may combine two effects: an inability to compress the required state and a failure to plan an adequate compressed trace.
-
-## Frontier-model corruption
-
-Finding 5 is behavioral only. Residual-state patching requires white-box model access and has so far been performed at 7B scale.
-
-## Value specificity of the patch
-
-The clean intervention restores the complete residual state at the corrupted token position. It establishes that causally relevant state is stored and reused there, but does not yet show that the isolated numerical value is sufficient independently of the surrounding contextual representation.
-
-## Synthetic-task generality
-
-The synthetic tasks provide exact intermediate-state ground truth and controlled serial depth, which makes the causal interventions possible. The results do not by themselves establish that the same allocation pattern holds for open-ended mathematical, linguistic, planning, or safety-relevant reasoning.
+* Lesion result (finding 8): one model, one dose, n=40 per cell; the lesion also damages re-reading of written values, so the comparison is only clean at low-to-mid difficulty.
+* Budget result (finding 6): one model family, and the model is told the cap, so failure conflates cannot-compress with does-not-plan-for-the-cap.
+* Frontier read-back (finding 5) is behavioral only; the residual patch needs white-box access and is 7B-scale.
+* The patch (finding 4) restores full residual state, not the isolated value, so value-specificity is not yet shown.
+* Synthetic tasks buy exact ground truth and controlled depth at the cost of generality; nothing here establishes the same allocation pattern for open-ended math, planning, or safety-relevant reasoning.

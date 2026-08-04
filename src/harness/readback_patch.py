@@ -193,14 +193,24 @@ def main():
         corr_prefix_text = (clean_prefix_text[:pos]
                             + f"= {corr_val}." )
 
+        # third distinct value for the swap control (a value register test)
+        swap_val = clean_val + 2 * args.delta
+        swap_ans = forward_answer(inst, tgt + 1, swap_val)
+        swap_prefix_text = clean_prefix_text[:pos] + f"= {swap_val}."
+
         clean_ids = tok(clean_prefix_text, return_tensors="pt").to(device)
         corr_ids = tok(corr_prefix_text, return_tensors="pt").to(device)
-        if clean_ids.input_ids.shape[1] != corr_ids.input_ids.shape[1]:
-            continue  # keep alignment simple: same token length only
+        swap_ids = tok(swap_prefix_text, return_tensors="pt").to(device)
+        L = corr_ids.input_ids.shape[1]
+        if (clean_ids.input_ids.shape[1] != L
+                or swap_ids.input_ids.shape[1] != L
+                or len({swap_ans, clean_ans, corr_ans}) < 3):
+            continue  # need aligned lengths and three distinct answers
 
         plen = tok(prompt + "\n", return_tensors="pt").input_ids.shape[1]
         cs = capture_states(model, clean_ids.input_ids, layers)
         xs = capture_states(model, corr_ids.input_ids, layers)
+        ss = capture_states(model, swap_ids.input_ids, layers)
         # patch region: from the corrupted value token to the end of prefix
         vpos = value_token_positions(
             tok, corr_ids.input_ids[0].tolist(), plen, str(corr_val))
@@ -219,8 +229,10 @@ def main():
             r = r / (r.norm(dim=-1, keepdim=True) + 1e-6) * diff_norm
             rand_states[li] = xs[li] + r
 
+        swap_states = {li: ss[li] for li in layers}
         base_patch = ResidualPatch(model, layers, clean_states, start, end)
         rand_patch = ResidualPatch(model, layers, rand_states, start, end)
+        swap_patch = ResidualPatch(model, layers, swap_states, start, end)
 
         corr_ans_gen, corr_texts = continue_from(
             model, tok, corr_ids.input_ids, None, args.max_new, args.samples)
@@ -230,6 +242,9 @@ def main():
         with rand_patch:
             randed, _ = continue_from(model, tok, corr_ids.input_ids,
                                       rand_patch, args.max_new, args.samples)
+        with swap_patch:
+            swapped, _ = continue_from(model, tok, corr_ids.input_ids,
+                                       swap_patch, args.max_new, args.samples)
 
         def frac(ans_list, target):
             return sum(a == target for a in ans_list) / len(ans_list)
@@ -245,6 +260,10 @@ def main():
             "patched_follows_corruption": frac(patched, corr_ans),
             "rand_follows_clean": frac(randed, clean_ans),
             "rand_follows_corruption": frac(randed, corr_ans),
+            "swap_val": swap_val, "swap_ans": swap_ans,
+            "swap_follows_swap": frac(swapped, swap_ans),
+            "swap_follows_clean": frac(swapped, clean_ans),
+            "swap_follows_corruption": frac(swapped, corr_ans),
         }
         if args.debug:
             rec["corr_text_sample"] = corr_texts[0][:600]
