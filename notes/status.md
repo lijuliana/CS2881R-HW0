@@ -2,13 +2,13 @@
 
 Snapshot of what is done and what remains. Percentages are honest estimates of completion, weighted by importance.
 
-## Two different percentages, and the honest one is lower
+## Where it stands
 
-Against the experiment plan we wrote: ~98 percent (all planned experiments run, paper drafted, figures made).
+All planned experiments are done and the hardening round has closed the four gaps that would have sunk a top-venue submission (see notes/hardening.md). Against a sound-submission bar this is now roughly ~90 percent: the mechanism is validated, correctly scoped, and its causal claim covers reasoning models. What remains is polish (a final read-through, LaTeX conversion, and folding the last probe refinement in).
 
-Against the bar for a sound submission: closer to ~70 percent, because the plan itself omitted validation steps. Four gaps must close before this is defensible at a top venue (see notes/hardening.md): (1) we never replicated a prior result to anchor the harness, (2) the clean causal patch is on a non-reasoning model while the paper is about reasoning models, (3) the patch lacks a position-specificity control, (4) all tasks are synthetic. None invalidate the current findings, and none require a rebuild; the worst case is a modest rescope for (2). Estimated 2 to 3 focused days to close all four, or 1.5 to 2 if (2) is handled by rescoping rather than re-running. Replication goes first, because it either validates the setup or tells us to stop.
+The four gaps and their close: (1) replication, closed by reproducing truncation faithfulness and validating the probe machinery; (2) causal result on the model class we study, closed positively by the swap control on the reasoning distill; (3) patch specificity, closed and strengthened into the value-register result; (4) synthetic-only, closed as the recomputability-gating finding (read-back does not fire on GSM8K, and we explain why). Two honest negatives came out of it (GSM8K null, the probe's early-decodability confound), both recorded.
 
-The novel contribution (the read-back mechanism) is real and control-backed, but it is under-validated until those gaps close. The earlier "complete / 98 percent" framing measured progress against our own scope and was overconfident.
+The novel contribution, the read-back mechanism, is now control-backed, replicated-anchored, and correctly scoped.
 
 ## Experiments
 
@@ -45,11 +45,10 @@ The novel contribution (the read-back mechanism) is real and control-backed, but
 
 ## What remains
 
-1. entity-tracking protection completes (running now) then analyze the dissociation. If the gentle lesion (KL 0.03) does not bite entity tracking either, launch the staged higher-alpha (0.10) pass. This decides whether section 6 makes a positive dissociation claim or reports the lesion as too weak to conclude.
-2. fill paper section 6 with the protection result, add the protection figure.
-3. remove the paper draft header, final coherence and wording pass end to end.
-4. optional stretch: frontier-scale read-back (corruption on an API model via assistant prefill), and a param-matched depth ladder for the capacity question. Both are additive, not required.
+1. Fold the start-controlled probe refinement into the A1 write-up (running, last GPU job).
+2. Final coherence and wording read-through of the paper end to end.
+3. Optional: convert paper/main.md to LaTeX; a within-task recomputability manipulation and a param-matched depth ladder are additive, not required.
 
-## Risk notes
+## Notes
 
-- Protection is the one place a clean positive result is not yet in hand. The variable-chain arm behaved as the thesis predicts (internal lesion does not hurt externally-stored chains), but a dissociation needs entity tracking to be hurt by the same lesion. If neither is hurt at any safe dose, section 6 becomes "consistent with but not a clean causal confirmation of" the dissociation, and the paper still stands on experiments 1-7 and 9-10.
+The paper leads with the causal read-back mechanism (now a value register, shown on both a non-reasoning and a reasoning model, replication-anchored, recomputability-scoped) and treats the behavioral results as theory-predicted context. Every weak or null result is flagged rather than oversold; see notes/negative-results.md and notes/hardening.md.
