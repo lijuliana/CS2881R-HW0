@@ -119,7 +119,7 @@ We cannot patch residuals through an API, but the behavioral half of the read-ba
 
 ## 2026-08-04, hardening round: replication and real-benchmark generality
 
-Closing the gaps flagged in known-weaknesses.md.
+Closing the gaps flagged in hardening.md.
 
 Replication A2 (truncation faithfulness, Lanham et al.). Forcing the model to answer after only a fraction f of its own CoT, on variable chains d=12. V3.2 accuracy: 0.00 up to f=0.6, 0.03 at 0.8, 0.28 at 0.9, 0.97 at 1.0. Sonnet 4.5: 0.32 at f=0 (it solves a third of d=12 chains with no CoT, real internal capacity), dips through the middle, then 0.86, 0.98, 1.00 at f=0.8, 0.9, 1.0. Both curves are monotonic in the load-bearing region and collapse when the late steps are removed. This reproduces the Lanham qualitative result (CoT is causally load-bearing, truncation before the decisive steps destroys accuracy) on our setup, which is the harness anchor we were missing. On strictly serial chains the curve is close to a step function, the extreme-faithful end of the spectrum.
 
