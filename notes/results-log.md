@@ -158,4 +158,10 @@ We had moved the clean patch to a non-reasoning model because the reasoning dist
 
 The random control is elevated here (0.29 vs 0.00 on the instruct model), and that is the post-think re-solve: about a third of the time the model re-derives the clean answer regardless of the patch. But the re-solve produces the clean answer, never the arbitrary third value, so the swap condition cuts through the confound. The answer follows the injected third value 0.74 of the time, which re-solving cannot produce, so it is confound-free evidence that the reasoning model reads the injected value out of the residual and propagates it. The causal read-back holds on the reasoning model, not only the instruct model, which closes the off-scope weakness: the paper's causal claim now covers reasoning models directly, with the swap condition as the clean measurement.
 
+## 2026-08-04, start-controlled probe: the computed answer emerges through the trace
+
+Re-ran A1 decoding answer-minus-start (the start value removed, so the target is the genuinely computed part of the answer), Qwen2.5-7B-Instruct, d=12, n=300, best layer. Decodability rises from 0.27 at step-fraction 0.17 to 0.83 at 1.0, control at chance throughout. Compared with the confounded version (0.80 early to 0.96 late), removing the start confirms the start was doing the early work: the computed part is not decodable early (0.27 two steps in) and builds up through the written steps.
+
+Two clean conclusions. The probing machinery is validated (0.83 late decodability, control at chance). And the pre-CoT-decoding phenomenon does not hold for the genuinely computed quantity on our tasks: the answer is not sitting in the activations before the model writes the steps, it emerges as the steps are written, which is what the thesis predicts (the computation happens on the page). This is the honest, start-controlled version of the earlier confounded curve.
+
 Note on this file: it is the lab notebook, in dated order, including interim readings that were later revised. For the settled claims see notes/synthesis.md, for what did not work see notes/negative-results.md, and for the writeup see paper/main.md.
