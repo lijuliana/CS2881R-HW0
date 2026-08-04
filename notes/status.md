@@ -25,6 +25,10 @@ The novel contribution, the read-back mechanism, is now control-backed, replicat
 | 9 | capacity variance across models | how deep a chain fits in one forward pass | complete, demoted to open question (depth/params collinear) | 100% |
 | 10 | reasoning-model think/post-think diagnostic | why the reasoning model reverts to clean under corruption | complete, logged as a finding | 100% |
 | 11 | frontier read-back (behavioral, API) | does read-back generalize beyond 7B | complete: V3.2 0.78, Sonnet 4.5 0.97, 7B 0.42; reliability rises with capability | 100% |
+| 12 | swap control (value register) | is the residual a readable value register or is the answer injected | complete: patch to arbitrary value, answer follows it 0.76 (instruct) / 0.74 (reasoning) | 100% |
+| 13 | reasoning-model causal patch | does read-back hold on the model class we study | complete: swap 0.74 on R1-distill, confound-free | 100% |
+| 14 | recomputability gating (GSM8K) | does read-back generalize to a real benchmark | complete negative: null on GSM8K, read-back is recomputability-gated | 100% |
+| 15 | replication (truncation faithfulness + answer probe) | is the harness anchored to a known result | complete: Lanham curve reproduced, probe R2 0.96 control at chance | 100% |
 | - | gate A capacity lesion (compensation) | does internal pressure induce extra writing | dropped: coarse dose overshot the cliff, lower value, superseded by patch result | n/a |
 | - | eviction probe | does the internal copy decay after writing | dropped: invalid as built (review), subsumed by the patch result | n/a |
 | - | dag de-circularization | necessity on non-accumulated task | ran, inconclusive (externalization non-discriminating), reported honestly | n/a |
@@ -37,9 +41,11 @@ The novel contribution, the read-back mechanism, is now control-backed, replicat
 | plan.md (design, controls, compute) | complete | 100% |
 | hypotheses.md (pre-run expectations) | complete | 100% |
 | results-log.md (dated, append-only) | current through today | 100% |
-| synthesis.md (the claim, evidence, rules-out) | current | 95% |
-| paper/main.md | draft, section 6 pending, needs final pass | 88% |
-| figures (necessity, readback, budget, format, readback_patch) | 5 done, protection figure pending | 85% |
+| synthesis.md (claim, evidence, course corrections) | current | 100% |
+| paper/main.md | all sections filled incl. hardening; needs final read-through | 95% |
+| figures (necessity, readback, readback_patch, budget, format, protection, frontier) | 7 done | 100% |
+| findings.md / findings-full.md (human-readable summaries) | current | 100% |
+| hardening.md / negative-results.md | current | 100% |
 | per-experiment readmes | complete | 100% |
 | repo hygiene (authored as user, lowercase, no artifacts, no AI-isms) | maintained | 100% |
 
