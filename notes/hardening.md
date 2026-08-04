@@ -2,12 +2,12 @@
 
 Honest self-critique plus the plan and current status, in one place. The goal of the hardening round was to turn the read-back result from "real but under-validated" into "validated and correctly scoped." Replication ran first on purpose: if the harness could not reproduce a known result, we would stop and fix the harness before trusting anything else.
 
-## Status at a glance (2026-08-04)
+## Status at a glance (2026-08-04): all four closed
 
-- Weakness 1, no replication: CLOSED. Truncation faithfulness reproduces Lanham (behavioral, API), and the A1 probe validates the probing machinery (white-box). See below.
-- Weakness 2, causal result on a non-reasoning model: RESOLVING. Reasoning-model patch attempt (D) ran; if not clean we rescope to "language models" honestly.
-- Weakness 3, patch specificity: CLOSED, with a stronger result than before. The residual is a readable value register (patch to an arbitrary value, the answer follows that value 0.76).
-- Weakness 4, only synthetic tasks: CLOSED AS A NEGATIVE. Read-back does not fire on GSM8K because its intermediates are recomputable; read-back is recomputability-gated, not universal.
+- Weakness 1, no replication: CLOSED. Truncation faithfulness reproduces Lanham (behavioral), and the A1 probe validates the probing machinery (R^2 up to 0.96, control at chance). A start-controlled probe isolating the computed part is the final refinement.
+- Weakness 2, causal result on a non-reasoning model: CLOSED POSITIVELY. The swap control runs the patch on the reasoning distill too: the answer follows an arbitrary injected value 0.74, which the post-think re-solve cannot produce (re-solve gives clean, never the injected value). The causal claim now covers reasoning models directly, no rescope needed.
+- Weakness 3, patch specificity: CLOSED, stronger than before. The residual is a readable value register: patch to an arbitrary value and the answer follows that value 0.76 (instruct) / 0.74 (reasoning), clean 0.00, random 0.00.
+- Weakness 4, only synthetic tasks: CLOSED AS A NEGATIVE THAT BECAME A FINDING. Read-back does not fire on GSM8K because its intermediates are recomputable; read-back is recomputability-gated, not universal, which scopes the central claim.
 
 ## The four crucial weaknesses, the fix, and where it landed
 
