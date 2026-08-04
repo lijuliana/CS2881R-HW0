@@ -31,11 +31,11 @@ Each finding states the manipulated variable, the measurement, and the result.
 
 **Result:** the answer follows the edit on 84 percent of items (Qwen2.5-7B-Instruct, d=10, n=141). Most of the rest follow neither (later arithmetic slips). Almost none recover the original from the unchanged earlier steps, which are still in context. The written value is not a record of computation done elsewhere; later computation depends on it.
 
-### 4. Restoring clean internal state at the corrupted token restores the clean answer
+### 4. The residual at the written token is a readable value register
 
-**Variable:** token text stays corrupted, but the residual-stream state at that position is overwritten with the clean state from the uncorrupted run; control arm gets a matched-norm random perturbation. **Measured:** whether the continuation returns to the clean answer.
+**Variable:** token text stays corrupted, but the residual-stream state at that position is overwritten, either with the clean state from the uncorrupted run or with the state for an arbitrary third value the model never wrote; control arm gets a matched-norm random perturbation. **Measured:** which value the continuation's answer follows.
 
-**Result:** restoration reverts the answer on 97 percent of affected items (CI 94 to 99); the random control reverts 0 percent; replicates at d=20 (93 percent). The value is read out of the residual state at the written token, causally and specifically. Caveat: the patch restores the full residual state at that position, so it does not isolate the numerical value from everything else represented there.
+**Result:** restoring the clean state reverts the answer on 97 percent of affected items (CI 94 to 99), replicates at d=20 (93 percent), and the random control reverts 0 percent. The stronger condition: overwriting the residual with an arbitrary third value makes the answer follow that value 76 percent of the time (CI 70 to 82) and the clean value 0 percent. So the residual at the written token is a readable value register, set it to any value and the downstream computation reads and propagates that value. This rules out "the patch injects the answer," since the injected quantity is a mid-chain intermediate the model never produced and the answer follows it. It holds on the reasoning model too (R1-Distill-Qwen-7B: clean 100 percent, third value 74 percent), where the swap condition is confound-free because the post-think re-solve produces the clean answer, never the arbitrary third value. Caveat: the patch still overwrites the whole residual at that position, but because different injected values produce answers following those values, the value is the causal quantity.
 
 ### 5. Reliance on written values increases with model capability
 
@@ -77,7 +77,11 @@ The mirror test of N2. Under hard budgets the model compresses prose while keepi
 
 ### N4. Naive corruption tests are confounded in reasoning models
 
-Corrupt a value inside a think block and it propagates through the reasoning, but the answer section may then re-solve the problem from the prompt, so the final answer returns to clean even though the corrupted value was used. This masks read-back when only the answer is measured, and is why findings 3 and 4 use a non-reasoning model that continues a worked trace straight to the answer.
+Corrupt a value inside a think block and it propagates through the reasoning, but the answer section may then re-solve the problem from the prompt, so the final answer returns to clean even though the corrupted value was used. This masks read-back when only the answer is measured, and is why findings 3 and 4 use a non-reasoning model as the primary testbed. The swap control in finding 4 recovers a clean reasoning-model result despite this: re-solving lands on the clean answer, never on an arbitrary injected value, so the answer following the injected value is not maskable by re-solving.
+
+### N6. Read-back does not fire on GSM8K, because its intermediates are recomputable
+
+Running the corruption test on GSM8K is essentially null: a corrupted intermediate changes the answer 0.10 of the time against a 0.05 resample floor. This is not a depth effect (read-back is 0.64 to 0.80 across d=3 to 16 on synthetic chains); it is recomputability. A GSM8K intermediate is a shallow function of the problem's givens, recomputable in about one operation, so the model recomputes it and ignores the edit, whereas a chain intermediate requires re-deriving the whole chain, which exceeds the one-step internal ceiling. Read-back carries genuinely serial, non-recomputable state; on problems with shallow-recomputable intermediates it does not appear. This scopes the mechanism's footprint honestly.
 
 ### N5. Returns to the clean answer do not establish a persistent internal copy
 
@@ -88,5 +92,10 @@ An earlier reading treated a 0.48 to 0.68 clean-return rate after corruption as 
 * Lesion result (finding 8): one model, one dose, n=40 per cell; the lesion also damages re-reading of written values, so the comparison is only clean at low-to-mid difficulty.
 * Budget result (finding 6): one model family, and the model is told the cap, so failure conflates cannot-compress with does-not-plan-for-the-cap.
 * Frontier read-back (finding 5) is behavioral only; the residual patch needs white-box access and is 7B-scale.
-* The patch (finding 4) restores full residual state, not the isolated value, so value-specificity is not yet shown.
-* Synthetic tasks buy exact ground truth and controlled depth at the cost of generality; nothing here establishes the same allocation pattern for open-ended math, planning, or safety-relevant reasoning.
+* The patch (finding 4) overwrites the full residual at the position; value-specificity is shown by the swap result (different injected values yield answers following those values) but the co-located representation is not literally isolated.
+* Read-back is recomputability-gated (N6), so the mechanism applies to genuinely serial, non-shortcuttable computation and not to problems whose intermediates the model can cheaply recompute; this is the main limit on generality.
+* Synthetic tasks buy exact ground truth and controlled depth at the cost of generality; the one real-benchmark test (GSM8K) came back null for the recomputability reason above, so the same allocation pattern is not established for open-ended reasoning.
+
+## Validation
+
+Before extending prior work we reproduced two known results on our setup. Truncation faithfulness (Lanham et al. 2023): forcing an answer after a fraction of the model's own chain of thought gives accuracy monotonic in that fraction, collapsing when late steps are removed (V3.2 near zero to 0.97, Sonnet 0.32 to 1.00), which confirms the chain of thought is causally load-bearing on our tasks. And a linear probe reads the answer from the residual at R-squared up to 0.96 with a control probe at chance, validating the probing machinery the patch relies on.
