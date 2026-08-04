@@ -1,8 +1,8 @@
-# project status
+# Project status
 
 Snapshot of what is done and what remains. Percentages are honest estimates of completion, weighted by importance.
 
-## two different percentages, and the honest one is lower
+## Two different percentages, and the honest one is lower
 
 Against the experiment plan we wrote: ~98 percent (all planned experiments run, paper drafted, figures made).
 
@@ -10,7 +10,7 @@ Against the bar for a sound submission: closer to ~70 percent, because the plan 
 
 The novel contribution (the read-back mechanism) is real and control-backed, but it is under-validated until those gaps close. The earlier "complete / 98 percent" framing measured progress against our own scope and was overconfident.
 
-## experiments
+## Experiments
 
 | # | experiment | purpose | status | done |
 |---|------------|---------|--------|------|
@@ -29,7 +29,7 @@ The novel contribution (the read-back mechanism) is real and control-backed, but
 | - | eviction probe | does the internal copy decay after writing | dropped: invalid as built (review), subsumed by the patch result | n/a |
 | - | dag de-circularization | necessity on non-accumulated task | ran, inconclusive (externalization non-discriminating), reported honestly | n/a |
 
-## writing and deliverables
+## Writing and deliverables
 
 | item | status | done |
 |------|--------|------|
@@ -38,19 +38,18 @@ The novel contribution (the read-back mechanism) is real and control-backed, but
 | hypotheses.md (pre-run expectations) | complete | 100% |
 | results-log.md (dated, append-only) | current through today | 100% |
 | synthesis.md (the claim, evidence, rules-out) | current | 95% |
-| review-response.md (adversarial self-review acted on) | complete | 100% |
 | paper/main.md | draft, section 6 pending, needs final pass | 88% |
 | figures (necessity, readback, budget, format, readback_patch) | 5 done, protection figure pending | 85% |
 | per-experiment readmes | complete | 100% |
 | repo hygiene (authored as user, lowercase, no artifacts, no AI-isms) | maintained | 100% |
 
-## what remains
+## What remains
 
 1. entity-tracking protection completes (running now) then analyze the dissociation. If the gentle lesion (KL 0.03) does not bite entity tracking either, launch the staged higher-alpha (0.10) pass. This decides whether section 6 makes a positive dissociation claim or reports the lesion as too weak to conclude.
 2. fill paper section 6 with the protection result, add the protection figure.
 3. remove the paper draft header, final coherence and wording pass end to end.
 4. optional stretch: frontier-scale read-back (corruption on an API model via assistant prefill), and a param-matched depth ladder for the capacity question. Both are additive, not required.
 
-## risk notes
+## Risk notes
 
 - Protection is the one place a clean positive result is not yet in hand. The variable-chain arm behaved as the thesis predicts (internal lesion does not hurt externally-stored chains), but a dissociation needs entity tracking to be hurt by the same lesion. If neither is hurt at any safe dose, section 6 becomes "consistent with but not a clean causal confirmation of" the dissociation, and the paper still stands on experiments 1-7 and 9-10.

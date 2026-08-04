@@ -1,12 +1,12 @@
-# chain of thought is not a scratchpad the model spills to, it is the tape the computation runs on
+# Chain of thought is not a scratchpad the model spills to, it is the tape the computation runs on
 
 Working draft. Numbers cite notes/results-log.md by date; figures are in results/figures.
 
-## abstract
+## Abstract
 
 The intuitive picture of chain-of-thought is a memory hierarchy: the model computes in its activations and spills intermediate state onto the page when its internal workspace fills up. We test this in reasoning models and find it backwards for serial tasks in three ways. First, there is no spill point. Models write every intermediate value from the very easiest problems, at every scale from 1.5B to 671B, and cannot carry even one dependent step without writing it down. Second, the written values are not a record of the computation, they are the computation: corrupting a single written number changes the final answer, and in a residual-stream intervention we restore that number's internal representation while leaving the visible token corrupt, which flips the answer back to the clean value on 97 percent of items, with a matched random perturbation doing nothing. The model reads its own written value out of the residual stream at that token, and does not re-derive it from the operands. Third, the written value is incompressible: under a token budget the model trims prose by half but never drops a value, and below roughly twelve tokens per step it stops summarizing and simply fails. The unifying principle is that the tier a computation uses is set by the kind of memory it needs, not the amount: parallel state (tracking many entities) stays in activations, while serial state (a dependency chain) has nowhere to live but the token stream, a split that transformer expressivity theory predicts, that shows up behaviorally (externalization predicts success on chains but not on entity tracking), and that a residual-stream lesion confirms, hurting entity tracking about three times as much as it hurts chains where both can be measured cleanly. We close with the one internal boundary that does vary, how deep a chain fits in a single forward pass, and what a write-everything regime means for monitoring reasoning.
 
-## 1. the surprise
+## 1. The surprise
 
 Ask when a reasoning model keeps intermediate state in its head and when it writes state onto the page, and the natural hypothesis is a hierarchy with a threshold: activations are fast but shallow, tokens are slow but unbounded, so the model should reason internally until it runs out of room and then start externalizing, giving a difficulty at which writing switches on.
 
@@ -22,7 +22,7 @@ Three claims, each backed by an intervention rather than a correlation:
 
 The behavioral scaffolding around these (saturated writing, the serial-versus-parallel split) is what fixed-depth expressivity theory predicts. We use that theory as the reason the mechanism must exist and put the mechanism, which the theory does not describe, in front.
 
-## 2. related work
+## 2. Related work
 
 Expressivity theory says a constant-depth transformer is confined to a parallel complexity class in one forward pass and that chain-of-thought length buys serial computational power (Merrill and Sabharwal 2023, 2024; Li et al. 2024; Feng et al. 2023, where CoT tokens hold dynamic-programming state). This predicts the behavior and motivates the mechanism study.
 
@@ -30,7 +30,7 @@ Faithfulness work shows CoT is sometimes load-bearing and sometimes post-hoc, wi
 
 The two nearest papers frame the question and stop short of the causal test. "LLM Reasoning Is Latent, Not the Chain of Thought" (2604.15726) argues the trace is a partial interface onto latent computation, and its own section 4.2 asks for a token-corruption experiment it never runs; ours runs it and bounds the claim. "Unlocking the Working Memory of LLMs" (2605.30343) engineers latent memory blocks that remove the need to externalize at small scale, which is consistent with our reading that externalization is a capacity workaround, but it never manipulates capacity or difficulty and never measures read-back. The token-level causal experiment, corrupting a written value and patching its residual, is run by neither.
 
-## 3. setup
+## 3. Setup
 
 **Tasks.** Four families with a scalar difficulty knob and exactly specifiable intermediate values: modular arithmetic chains, variable chains (LEGO style), entity tracking, and DAG reachability. Difficulty is decoupled from output length (the answer is always one value), so it measures required computation, not required writing. Serial depth (chains) and parallel storage (entity tracking) are separate knobs by design, to test whether both create the same pressure. Generators are seeded and deduplicated, and the corruption arithmetic is checked against the generators by a replay test.
 
@@ -38,13 +38,13 @@ The two nearest papers frame the question and stop short of the causal test. "LL
 
 **Measuring externalization.** The primary detector is exact match of a ground-truth value in the trace, with numeral normalization and a flag for values that also appear in the prompt. We calibrate it with a permutation control (score each trace against a different instance's values): on variable chains the false-positive rate is 0.00 to 0.08, but on mod-97 it climbs to 0.72 at high difficulty because a long trace mentions most residues by chance, so mod-97 is benched for externalization and variable chains are primary. Where surface matching could be circular we fall back on a causal definition, that a value is externalized if corrupting its written form changes the answer.
 
-## 4. no spill point: the write policy is saturated
+## 4. No spill point: the write policy is saturated
 
 In free generation, externalization fraction sits at ceiling (0.93 to 1.00) at every difficulty from one step upward, across the distill ladder and for R1-671B and V3.2 alike. There is no onset to find. The interesting structure appears when we split by correctness: among correct traces at sixteen or more steps, externalization is exactly 1.000 across all three distill sizes (n=1935 pooled), while wrong traces sit near 0.5. No correct deep chain omits a value.
 
 We state this as a strong association, not yet as necessity, because on variable chains the format writes each step as an equation whose result is the next value, so a value can appear by construction. Two things keep the association from being an artifact. The ceiling is uniform across chain position: early, middle, and late intermediates are all written at 1.00, whereas a purely format-forced ceiling would concentrate on the last step, since the model could in principle carry early results internally and only write later ones. And the direct-answer condition shows it cannot carry even one step internally, so writing every step is the only way it can proceed, not a stylistic choice. The causal footing for "the written value is used, not incidental" comes from the read-back experiment of the next section, not from the 1.000 alone. (We also tried a non-accumulated task, DAG reachability, where the answer is a node label; it was uninformative because every node already appears in the prompt and the model names many while searching, so externalization does not discriminate there, and we do not rely on it.)
 
-## 5. the tape: written values are read back, and they are incompressible
+## 5. The tape: written values are read back, and they are incompressible
 
 **Read-back, isolated from re-derivation.** Corrupting the last written mention of a mid-chain value and continuing generation flips the final answer 31 to 50 percent of the time on the reasoning model, rising with difficulty, which already refutes the strong view that the trace is a read-only shadow of latent computation (that view predicts near-zero flips). But a flip alone is ambiguous: corrupting the token also feeds any re-computation, and on a reasoning model the answer is re-derived after the think block. We report that diagnostic honestly rather than hide it: inside the think block the corrupted value propagates and reaches the corruption-consistent answer, but the post-think section re-solves the problem from the prompt, which is why the reasoning model's answer often returns to the clean value. Because the full problem stays in context, a return to the clean answer is re-derivation from the prompt and is not evidence of a stored internal copy, so we make no internal-copy claim.
 
@@ -54,7 +54,7 @@ The clean experiment removes both confounds by moving to a non-reasoning model (
 
 **Incompressibility.** If written values are load-bearing memory, they should be the last thing a model gives up under pressure, and they are. Under token budgets on V3.2, prose compresses by up to 2.5x with accuracy intact while externalization stays at 0.98 to 1.00: the model deletes filler words, never values. Below roughly twelve tokens per step it does not summarize or move the computation inward, it truncates and fails. Written values behave like incompressible cargo, not optional narration.
 
-## 6. the principle: the tier is set by the kind of memory, not the amount
+## 6. The principle: the tier is set by the kind of memory, not the amount
 
 Why serial and not everything? Because the residual stream is wide but shallow: it can hold many things in parallel and almost no serial depth. So parallel state should stay internal while serial state has nowhere to go but the page, and that is what we see. Externalization predicts success on serial chains (1.00 among correct traces) but is uninformative on entity tracking, where the model tracks sixteen swaps correctly while writing about a fifth of the state. Parallel storage lives in activations, serial chaining does not. This is the expressivity prediction (bounded depth limits serial computation, not parallel width) appearing behaviorally in one model at matched task surface.
 
@@ -62,18 +62,18 @@ The causal version is a lesion experiment: resample-ablate a window of the resid
 
 Two honesty notes. The lesion is blunt: it damages the re-reading of written values as well as the internal workspace, since both live in the residual stream, so it is not silent on chains either, and at the longest chains it does hurt them (there the accumulated re-reads of eight written values are corrupted, while entity tracking has already floored and cannot drop further), which is why the clean family comparison sits at low-to-mid difficulty. And a methodological fix matters here: the first version of this lesion fired only on generated tokens, so it barely touched the direct condition (whose computation happens while reading the prompt) and the two conditions were not comparable; the corrected lesion fires during prompt processing too, and the dose is metered against a matched-damage control arm rather than a single KL number, since neither KL meter is clean (on-task KL folds in the targeted effect, and neutral-text KL is inflated because the resample bank is off-distribution for neutral prose). The clean tier-level causal claim in this paper is the read-back patch; this experiment is supporting evidence for the serial-versus-parallel split, at a three-to-one ratio where it can be measured cleanly.
 
-## 7. a sharp signature: the payload is the value
+## 7. A sharp signature: the payload is the value
 
 If the written payload is memory, the way it is written should decide how much memory a fixed budget buys, and it does, with a clean dose-response. We asked for the same variable chains in four scratchpad formats. A code-like format that writes each step's evaluated value (b = a + 52, then its result) is the efficient optimum, solving through forty-eight steps at a fraction of the tokens of prose and two to ten times its accuracy per token. Prose is next. A verbose format that restates the full running state each step is the least efficient and collapses at the deepest level, so over-writing is as harmful as under. The sharpest condition writes the operations but not their evaluated values: it suppresses value-writing at low depth and fails in proportion, with a per-instance correlation of externalization and correctness of +0.74 (writing under half the values gives 0.58 accuracy, writing nearly all gives 1.00). A format that nudges the model away from writing values makes it fail exactly to the degree it complies, which says the evaluated value, not the operation and not the surrounding prose, is the load-bearing payload. Practically, a compact value-carrying scratchpad is the efficient external memory, and since it is also the most legible, efficiency and monitorability point the same way.
 
-## 8. the one internal boundary
+## 8. The one internal boundary
 
 Since externalization has no onset, the boundary that does vary is internal serial capacity: how deep a chain a model finishes in a single forward pass, read off the direct-answer cliff. It ranges from about one step in the distills and the DeepSeek pair to about four in Llama-70B. Whether it tracks depth or parameter count we cannot resolve with these models, because within a family depth and parameters are collinear and the one cross-family contrast that points to depth is confounded, so we report it as a bounded, model-dependent quantity and an open question, not a fitted law.
 
-## 9. implications for monitorability
+## 9. Implications for monitorability
 
 The write-everything regime is, on its face, good news for oversight: if a model must externalize serial state to compute at all, its chain-of-thought is monitorable for that computation as a matter of capacity, not goodwill, and the read-back result shows the written values are not decorative but the very quantities the answer depends on, more so as models get stronger (the corruption-follow rate rises from the 7B distill to V3.2 to Claude Sonnet 4.5). The risks are the two boundaries this paper draws. Parallel computation that fits in activations need not be written and is invisible by default, which bounds what any monitor can see. And a deeper model with more internal serial capacity can move more of the chain off the page, so monitorability of serial reasoning should be expected to erode as the direct-answer cliff moves outward with scale.
 
-## 10. limitations
+## 10. Limitations
 
 Synthetic tasks buy exact intermediate ground truth at the cost of ecological validity, which is the right trade for causal work but caps generality. The white-box results are on distilled reasoning models and one instruct model, so RL-specific claims are limited. The teacher-forced worked traces in the patch experiment are mildly off the sampled-generation distribution, which is exactly why that experiment uses a non-reasoning model whose native output is a worked trace, and the reasoning-model diagnostic is reported rather than hidden. The lesion experiment cannot cleanly separate the two tiers, as noted. The capacity boundary is read off a coarse difficulty grid. Each section names its own controls and its own failure mode.

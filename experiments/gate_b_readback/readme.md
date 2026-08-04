@@ -1,4 +1,4 @@
-# read-back and verification
+# Read-back and verification
 
 Question: corrupt the last written mention of a mid-chain value, continue generation. Does the answer follow the corrupted value (read-back) or the clean value (internal copy)?
 

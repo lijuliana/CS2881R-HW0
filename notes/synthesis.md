@@ -1,14 +1,14 @@
-# synthesis: what the experiments say
+# Synthesis: what the experiments say
 
 Living document. The claim, the evidence, the alternatives ruled out, and what is left to nail down. Updated as results land; numbers cite results-log.md entries by date.
 
-## the claim
+## The claim
 
 For serial reasoning past a shallow internal-capacity limit, chain-of-thought is not a spillover buffer that models use under pressure. It is the medium the computation runs in. The residual stream is a wide but shallow workspace: it holds many values in parallel but cannot carry a chained result more than about one serial step without writing it down. So models write every intermediate of a serial chain and read those written values back, from the residual representation at the written token, to compute the next step. The token stream is the durable serial memory; the residual stream is a fast parallel register file whose serial depth is too shallow to hold a chain.
 
 This is sharper than the memory-hierarchy framing we started with, and in one respect it contradicts it. The starting hypothesis was that models externalize *when internal capacity is pressured*, implying a load-triggered onset. We do not find an onset. Externalization is saturated from the easiest problems at every scale and family we measured. The trade-off is not "internal until full, then external." It is "external for anything serial, internal for parallel storage and verification." The dividing line runs along the type of memory demand, not its amount.
 
-## the evidence, and what each rules out
+## The evidence, and what each rules out
 
 1. **Complete externalization is strongly associated with correct serial depth.** Across the 1.5B/7B/14B distill ladder, externalization fraction among correct traces at difficulty 16 and up is exactly 1.000 (n=1935 correct traces, 2026-08-02). Among wrong traces it is ~0.5. No correct deep chain omits a value. Stated as association, not necessity, because on variable chains the format writes each step as "x = y op z = value" so values can appear by construction. Two things keep it from being an artifact. First, the ceiling is uniform across chain position (early, middle, late intermediates all written at 1.00, necessity_decompose.py); a purely format-forced ceiling would be carried by the last one or two steps, since the model could compute early steps internally and only write later ones. It never does. Second, the direct-answer condition shows the model cannot carry even one serial step internally, so writing every step is the only way it can proceed. The causal footing (the written value is used, not incidental) comes from the read-back experiment below, not from the 1.000 alone. The DAG de-circularization attempt was inconclusive (externalization non-discriminating when nodes are in the prompt) and is not relied on.
 
@@ -24,16 +24,27 @@ This is sharper than the memory-hierarchy framing we started with, and in one re
 
 7. **The payload is the value, not the operation or the prose.** Across four scratchpad formats at matched difficulty (2026-08-02), a compact format that writes each evaluated value (code_eval) is the efficient optimum, 100 percent through d=48 at 2 to 10 times the accuracy per token of prose. A format that writes operations without evaluating them (code) fails in proportion to how much it suppresses value-writing, with a within-format per-instance correlation of externalization and correctness of +0.74 (accuracy 0.58 when under half the values are written, 1.00 when nearly all are). Over-externalization also hurts: a verbose running-state dump collapses at the deepest level. Rules out: the writing helping through generic "more compute" or "more words". The evaluated value is the load-bearing payload, and the within-code dose-response is behavioral causal evidence for it.
 
-## the law
+## The law
 
 Because externalization has no onset, the fittable quantity is the internal serial capacity itself: d_int, the depth a model completes without writing. It varies across models (Llama-70B reaches ~5 serial steps; the distills and the DeepSeek pair sit at 1-2). But the depth-vs-params question is not resolvable with the models we have: within the Llama family depth and log-params are collinear (both correlate ~0.85-0.90 with d_int), and the one contrast that points to depth, 80-layer Llama-70B beating 61-layer 671B DeepSeek, is confounded by family and training. So the honest statement is: internal serial capacity is real, small, and model-dependent, and whether depth or scale sets it is open. Settling it needs a param-matched depth-varying set (looped or depth-scaled transformers) we do not have. This is filed as an open question, not a claimed law, so the paper does not rest on it.
 
-## what would still change the picture
+## What would still change the picture
 
 - Gate A (running): if sub-cliff internal lesions *do* shift writing, clause "no load-triggered onset" needs qualifying: the onset may exist but sit below the easiest task we used. If lesions only degrade, the saturation picture holds.
 - Layer-band patch sweep (running): patching early vs mid vs late layers localizes which depths carry the read-back. If only mid and late bands revert the answer, the value is read from processed representations, not the raw token embedding.
 - Protection experiment (running): the differential prediction is that internal lesions hurt entity tracking more than variable chains, and CoT protects chains more than boxes. That is the causal test of clause 6, the strongest single claim.
 
-## novelty position
+## How the project changed (major course corrections)
+
+Preserved from an earlier review-and-revise round so the reasoning behind the pivots is not lost. Each was driven either by the data overturning an expectation or by a critique catching something.
+
+1. The thesis flipped. We set out to confirm a memory hierarchy with a spill threshold; the data showed no threshold (writing is saturated from d=1 and the model cannot do even one step internally), so the framing became "chain of thought is the medium of serial computation," which we could then show causally.
+2. The mechanism was put in front. A critique noted the behavioral results are the shadow of known expressivity theory, so the causal read-back experiment leads and the behavioral results became theory-predicted context.
+3. The clean causal patch moved to a non-reasoning model. The reasoning model re-solves after its think block and masks the read-back, so the clean patch runs on Qwen2.5-7B-Instruct; the re-solve itself became a logged finding.
+4. Three lines were dropped or demoted. The scaling-law aspiration became an open question (depth and params collinear); gate A (does pressure induce writing) was dropped once the write policy proved saturated; the eviction probe was dropped once the patch subsumed it.
+5. Two readings were withdrawn. The "verification regime" and "internal copy persists" claims fell once we saw the returned-to-clean answers are re-derivation from the in-context prompt, not a stored copy.
+6. A lesion bug was caught and fixed. The protection lesion first fired only on generated tokens, so the direct condition was barely touched; fixed to fire during prompt processing, which changed the protection result from broken to a moderate honest dissociation.
+
+## Novelty position
 
 The correlational premise (activations carry reasoning state, CoT is sometimes unfaithful) is established by the 2025-26 wave and we do not re-claim it. The contribution is the causal chain, write then read-back then verify, measured with token corruption and teacher-forced probing; the incompressibility result; and the reframe of the onset question into an internal-serial-capacity law that comes out on the depth axis the theory predicts. None of the four nearest papers (2604.15726, 2605.30343, Kudo 2024, Lanham 2023) run the corruption-following, eviction, or capacity-ladder experiments; the first explicitly calls for the corruption design it never runs.

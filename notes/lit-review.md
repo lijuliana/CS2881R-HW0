@@ -1,8 +1,8 @@
-# literature review
+# Literature review
 
 Four sweeps: latent reasoning, CoT faithfulness and monitorability, mech interp methods, and difficulty scaling / task design. This file is the synthesis; the goal is to know exactly what is already established, what is contested, and where the open ground is.
 
-## 1. what is already established
+## 1. What is already established
 
 **CoT tokens can serve as externalized computation state.** This is settled at three levels. Theory: fixed-depth transformers are limited to roughly TC0 in a single forward pass (Merrill and Sabharwal 2023, arXiv:2207.00729), and CoT length buys computational class in a precise way, with linear steps reaching regular languages and polynomial steps reaching P (Merrill and Sabharwal, ICLR 2024, arXiv:2310.07923; Li, Liu, Zhou, Ma, ICLR 2024, arXiv:2402.12875; Feng et al., NeurIPS 2023, arXiv:2305.15408, where CoT tokens literally hold DP table entries). Mechanism, in toy models: the "iteration head" circuit (Cabannes et al., NeurIPS 2024, arXiv:2406.02128) implements an RNN whose hidden state is the emitted token stream. Framing: Korbak et al. 2025 (arXiv:2507.11473) state the necessity argument for safety, that hard serial tasks force CoT to act as working memory. So "CoT is external memory" is background, not a contribution.
 
@@ -14,7 +14,7 @@ Four sweeps: latent reasoning, CoT faithfulness and monitorability, mech interp 
 
 **Latent-reasoning alternatives exist and have known character.** Coconut (arXiv:2412.06769) and the superposition theory around it (arXiv:2505.12514) show continuous latent thought carries superposed parallel candidates, which discrete tokens cannot. Pause and filler tokens (arXiv:2310.02226, arXiv:2404.15758) add parallel compute width, not serial depth; Pfau et al. is the cleanest existing dissection of compute-slots vs content-bearing memory, and filler substitution is our key control condition.
 
-## 2. what is contested or missing
+## 2. What is contested or missing
 
 - Nobody intervenes on the model's internal capacity and shows computation migrating into the token stream. The exchange rate between depth and CoT length exists as a theorem (Li et al. 2024) and as a behavioral correlate (Lanham et al.), never as a measured mechanistic quantity.
 - No study of write/read-back dynamics: whether internal representations of an intermediate value decay after the value is written to tokens (eviction), and whether models refill internal state by attending back to their own CoT. Iteration heads are the nearest thing, in toys only.
@@ -22,7 +22,7 @@ Four sweeps: latent reasoning, CoT faithfulness and monitorability, mech interp 
 - Nearly all mechanistic evidence is GPT-2 scale or from-scratch toys. Interp on R1-style RL-trained reasoners is thin: SAE feature work (arXiv:2503.18878, Goodfire's R1 SAEs) and steering vectors for reasoning moves (Venhoff et al., arXiv:2506.18167) exist, but no workspace-level causal analysis.
 - No information accounting across the boundary: how many bits of task-relevant intermediate state sit in activations vs tokens at each point in a trace.
 
-## 3. methods we will build on
+## 3. Methods we will build on
 
 From the interp methods sweep, the toolkit and its known failure modes:
 
@@ -33,7 +33,7 @@ From the interp methods sweep, the toolkit and its known failure modes:
 - Sentence-level counterfactual resampling on reasoning traces (thought anchors, Bogdan et al., arXiv:2506.19143) is the state of the art for which written sentences are causally read back, including the "receiver head" mechanism. This is the external-side tool to pair with our internal-side interventions.
 - The controls any ablation claim needs: random directions of matched rank and norm, control tasks that must stay flat, dose-response curves, and a global damage meter (KL to the clean model).
 
-## 4. task families
+## 4. Task families
 
 From the difficulty sweep, the families with a clean scalar knob where low difficulty is solvable without CoT:
 
@@ -44,7 +44,7 @@ From the difficulty sweep, the families with a clean scalar knob where low diffi
 
 Tower of Hanoi and similar planning tasks only as stress tests with program-output controls, because of the output-length confound.
 
-## 5. novelty position
+## 5. Novelty position
 
 The claim "models externalize when internal capacity is pressured" exists as theory and as scattered behavioral correlates. What does not exist, and what this project targets:
 

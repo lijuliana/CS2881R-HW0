@@ -1,4 +1,4 @@
-# experiments
+# Experiments
 
 Each directory is one experiment: what it asks, the command that produced its data, and how to read the result. Raw data lives in results/raw (gitignored, regenerable from these commands); figures in results/figures.
 

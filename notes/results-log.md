@@ -1,8 +1,8 @@
-# results log
+# Results log
 
 Append-only. Dated entries, newest last. Interpretations here are working notes, not conclusions.
 
-## 2026-08-01, frontier behavioral sweeps (bedrock)
+## 2026-08-01, Frontier behavioral sweeps (bedrock)
 
 Models: DeepSeek R1-671B (us.deepseek.r1-v1:0), DeepSeek V3.2 (non-reasoning counterpart). Families: mod arithmetic (p=97), variable chains. n=30 per cell, free and direct conditions, full data in results/raw/p1_*_r1_671b.jsonl and p1_mod_v32.jsonl.
 
@@ -14,7 +14,7 @@ Matcher calibration (permutation control, matching each trace against a differen
 
 Caveat logged: the surface matcher says written; whether written values are read back is gate B's question, and the causal definition of externalization (corrupt the written value, see if the answer moves) remains the ground truth to reconcile against on a subsample.
 
-## 2026-08-01, gate b (read-back) and phase 1 on r1-distill-7b
+## 2026-08-01, Gate b (read-back) and phase 1 on r1-distill-7b
 
 Gate B, variable chains (the collision-free family), n=128 to 149 per difficulty: corrupting the last written mention of a mid-chain value flips the final answer in 31 percent of continuations at d=4, 42 at d=8, 50 at d=16, 36 at d=32. At d=32 the drop coincides with restates_clean jumping to 0.45: the model increasingly notices the edit and reasserts the clean value early in the continuation. Reading: written values are causally live (the CoT-as-projection position predicts near zero and is refuted at this scale), but the internal copy persists alongside (follows_clean 0.48 to 0.68 throughout), and at high d an active cross-check between tiers appears. The picture so far is redundant storage with verification, not strict write-then-evict. The eviction probe (2b) now has a sharper question: not whether the internal copy disappears, but whether its precision degrades once the written copy exists.
 
@@ -22,7 +22,7 @@ Gate B, mod-97: follows_corruption collapses from 0.44 (d=6) to 0.01 (d=12). Not
 
 Phase 1, 7B, free condition: mod arithmetic externalization runs 0.78 to 0.91 below d=6 and reaches 0.99 by d=12 (chance-correction pending given the mod-97 matcher issue); variable chains sit at 0.93 to 1.00 everywhere. Direct condition collapses by d=2 on all families (7B cannot do two serial ops without writing, matching the frontier result). Entity tracking gives the best difficulty cliff in free generation (0.97 at d=1 down to 0.18 at d=24) and is the designated family for the protection experiment; its externalization fraction is unmeasurable with the current matcher because every object name also appears in the prompt, so it needs a pattern-based measure (planned fix, not blocking).
 
-## 2026-08-01, token-budget sweep, v3.2, variable chains
+## 2026-08-01, Token-budget sweep, v3.2, variable chains
 
 Budgets 64/128/256/512 tokens vs free, d=8/16/32/64, n=30 per cell (results/raw/budget_var_v32.jsonl). Three regularities. First, prose compression: under a binding but sufficient budget the model cuts trace length up to ~2.5x versus free (466 to 184 tokens at d=16) with accuracy intact (0.93 to 0.97). Second, content incompressibility: externalization fraction stays at 0.98 to 1.00 through that compression; the model removes filler words, never intermediate values. Third, a floor near 11 to 12 tokens per step: once the budget falls below roughly 12 x d, the model does not skip values, summarize, or shift computation internally; it writes at its floor rate until truncated and accuracy drops to exactly zero (externalization fraction then tracks budget/need: 0.72, 0.36, 0.17 down the difficulty column at budget 128). Accuracy per cell is essentially binary.
 
@@ -30,29 +30,29 @@ Extraction check (from review): at the wall (budget 64, d>=32, all 60 items) eve
 
 Reading: the write policy is elastic in verbosity and inelastic in content. Written values behave like incompressible cargo, consistent with load-bearing external memory rather than narration. Under external-channel pressure this model truncates rather than internalizes, meaning no internal substitution capacity is available at these depths, the sharpest behavioral statement yet of the hierarchy's lower tier being mandatory. Caveats: single model, one family, instruction-based budgets (the model was told the cap, so floor behavior conflates cannot-compress with does-not-plan-for-cap); a reasoning-model version and a local 7B version with hard caps and no instruction are the natural follow-ups.
 
-## 2026-08-02, gate a first pass, ladder sweeps, and the necessity result
+## 2026-08-02, Gate a first pass, ladder sweeps, and the necessity result
 
 Gate A, coarse doses (alphas 0.15/0.3/0.5, 7B, variable chains d=8): all doses landed past the accuracy cliff (clean 0.99; target 0.01 and control 0.22 at the lowest dose). Two observations survive the overshoot: the mid-stack target window is much more task-critical than the shallow control window at similar KL (0.632 vs 0.538), and past the cliff externalization drops rather than rises, with traces ballooning into incoherence, the expected signature of a destroyed workspace being unable to organize writing at all. The compensation question is undecided at sub-cliff doses; a fine sweep (alphas 0.02 to 0.12) is running.
 
 Ladder (1.5B/7B/14B, variable chains, free): accuracy at d=48 is 0.16 / 0.81 / 0.87; externalization among all traces declines with d for 1.5B only (0.54 at d=48). Conditioning on correctness dissolves that decline: externalization among correct traces is exactly 1.00 for every model at every d of 16 and above (n=1125 correct traces pooled), against 0.42 to 0.62 among wrong traces. No correct deep trace anywhere in the ladder omits a single intermediate value. Complete externalization behaves as a necessary condition for depth, and the apparent internalization of the small model is trace disintegration among its failures.
 
-## 2026-08-02, serial vs parallel dissociation (entity tracking rescored)
+## 2026-08-02, Serial vs parallel dissociation (entity tracking rescored)
 
 With the pattern-based matcher (box-object binding statements), entity tracking on 7B shows externalization among correct traces falling from 0.83 (d=4) to 0.20 (d=16), and ext among correct is statistically indistinguishable from ext among wrong at every d (0.20 vs 0.17 at d=16). Contrast with variable chains, where ext among correct is exactly 1.00 at d of 16 and above and wrong traces sit near 0.5. So externalization predicts success on the serial family and not at all on the parallel-storage family, and models demonstrably succeed at 16-move entity tracking while writing a fifth of the state bindings. Reading: internal capacity is wide but shallow. Parallel state (many simultaneous bindings) lives comfortably in activations; chained serial updates do not survive a forward pass, which is what forces the external tier. This is the transformer-expressivity prediction showing up behaviorally in one model with matched task surface. Caveat: matcher recall differs between families, so only the within-family predictiveness contrast is claimed, not absolute levels. The lesion experiments can now target this dissociation directly: internal lesions should hurt entity tracking (internal storage) more than variable chains (external storage) at matched difficulty, which the protection experiment measures.
 
-## 2026-08-02, answer extraction fix and cross-family results
+## 2026-08-02, Answer extraction fix and cross-family results
 
 Found via Llama 70B spot-check: traces ending "The final answer is: $\boxed{X}$" were graded by capturing "is". extract_answer now handles boxed and comma-grouped answers; every stored file was rescored in place (backups kept). Impact: Llama free-condition numbers were badly understated (70B at d=16 was 0.00, is 1.00); ladder numbers moved by at most a few points; the necessity result is unchanged and now stands at ext|correct exactly 1.000 over 1,935 correct traces at d of 16 and above across 1.5B/7B/14B.
 
 Cross-family (Llama 3.1-8B, 3.3-70B, variable chains): 70B free is perfect through d=48; 8B holds 0.93 at d=48. The notable number is the direct cliff: 70B holds 0.93 direct accuracy at d=4 and collapses at d=8, while every other model measured (including R1-671B and V3.2) collapses at d=1 to 2. First clear cross-model variance in internal serial capacity, giving the onset law real variance to fit. Externalization in free generation is at ceiling for both Llamas, matching the saturation picture; the models that need less writing do not write less.
 
-## 2026-08-02, internal serial capacity, Llama depth ladder
+## 2026-08-02, Internal serial capacity, Llama depth ladder
 
 Direct-condition d_int (largest depth with >=0.5 no-CoT accuracy) across Llama 3.x: 1B=0, 3B=0, 8B=1.9, 11B=0, 70B=5.4. Within this family depth and log-params correlate with d_int at 0.90 and 0.84, so they are collinear and the ladder cannot separate them. Two honest caveats: the 11B is the vision-augmented model and reads as an anomaly (0, below the 8B), and small models failing at d=1 means one in-context +/- step already exceeds their reliable no-CoT capacity.
 
 Correction to the earlier depth-not-params note: the only evidence pointing to depth over params is the cross-family contrast, Llama-70B (80 layers, 70B) reaches d_int~5 while DeepSeek V3.2 and R1-671B (61 layers, 671B) sit near the floor. That is suggestive but confounded by architecture family and training regime, so the capacity law is downgraded from a claim to an open question. What would settle it: a set matched on parameter count but varying depth (looped or depth-scaled transformers), which we do not have. Recorded so the writeup does not overclaim.
 
-## 2026-08-02, external representation geometry (format sweep, V3.2, variable chains)
+## 2026-08-02, External representation geometry (format sweep, V3.2, variable chains)
 
 Four scratchpad formats requested by instruction, same instances (format_var_v32.jsonl, n=30 per format-difficulty). Result is a clean ordering by accuracy per token and a within-format dose-response.
 
@@ -62,11 +62,11 @@ Four scratchpad formats requested by instruction, same instances (format_var_v32
 
 Reading: the payload that matters is the evaluated value, not the operation and not the prose around it. The efficient external memory is a compact value store (code_eval); writing operations without values (code) reverts toward internal-only failure, and the within-code dose-response is behavioral causal evidence that value-externalization produces correctness. This is the external-geometry section and it has a direct design implication: a compact value-carrying scratchpad format raises effective external capacity several fold over prose, and a well-used external memory is a readable one, which is the monitorability upside.
 
-## 2026-08-02, readback patch, teacher-forcing diagnostic (methodological, with a finding)
+## 2026-08-02, Readback patch, teacher-forcing diagnostic (methodological, with a finding)
 
 The residual patch-back experiment on R1-distill-7B hit the teacher-forcing distribution problem the internal review predicted, and the diagnostic traces show something worth keeping. Fed a corrupted worked trace as its own prior output, the reasoning model continues the chain inside the think block and reaches the corruption-consistent value (for instance a trace with a corrupted step reaches l = z - 91 = 391, exactly the corrupt-forward answer), so within the ongoing computation it does read back the corrupted written value. But at the close of the think block the model restarts and re-solves the problem from scratch in its answer section, and that fresh solve, not the corrupted continuation, sets the final answer. So a reasoning model's think block propagates a corrupted written value while its post-think answer self-corrects. This is a real observation about how the two phases of a reasoning model relate, and it also means the clean read-back decomposition should run on a non-reasoning model whose native output is a worked trace with no restart. Moving the patch experiment to Qwen2.5-7B-Instruct; the gate B read-back result stays on the reasoning model and this diagnostic explains why its follows-clean share is substantial (the post-think self-correction).
 
-## 2026-08-02, readback patch on Qwen2.5-7B-Instruct, d=10 (the causal centerpiece)
+## 2026-08-02, Readback patch on Qwen2.5-7B-Instruct, d=10 (the causal centerpiece)
 
 n=141 items (variable chains, mid-chain value corrupted by +40, 5 samples each, residual patch on layers 10-19 at the corrupted token position and onward). Results:
 
@@ -78,13 +78,13 @@ Reading: the downstream computation reads the intermediate value from the value-
 
 Replication and localization. At d=20 the result holds (103 of 141 with an effect, restore reverts 0.93 [0.88, 0.97], random 0.00). The layer-band sweep does not localize to a narrow depth: restoring an early band (layers 0-9), the mid band (10-19), or a late band (20-27) each reverts the answer about equally (0.96, 0.97, 0.94), with the random control at 0.00 throughout. The honest reading is that the written value is redundantly carried in the residual at the token position across the whole stack, so overwriting any contiguous band to clean is sufficient because the cumulative residual reconstructs the clean value downstream. This is robustness of the representation, not a sharp circuit localization, and we report it as such.
 
-## 2026-08-02, dag necessity test (inconclusive, recorded honestly)
+## 2026-08-02, Dag necessity test (inconclusive, recorded honestly)
 
 The plan was to de-circularize the necessity result on DAG reachability, where the answer is a node label and the hop nodes are not accumulated into it. Result: hop-node externalization is at ceiling (1.00) for both correct and wrong traces at every difficulty (d=2 to 10, accuracy 0.94 down to 0.78). This does not give the clean contrast variable chains gave (where wrong traces sat near 0.5). The reason is structural: every node label already appears in the prompt edge list, and a reasoning model mentions many node labels while searching the graph, so "the hop node appears in the trace" is true regardless of correctness and does not measure externalization of a computed quantity. The DAG task cannot de-circularize the necessity claim.
 
 What actually addresses the circularity is the read-back experiment, not this test. Whether the written value appears "by construction" is beside the point once we have shown, causally, that corrupting it changes the answer 84 percent of the time and the model does not recompute from operands. The value is used, which is the load-bearing claim. The position decomposition (early intermediates written at 1.00, not only the format-forced late ones) is the supporting behavioral evidence. We drop the DAG necessity test and let read-back plus position decomposition carry the point.
 
-## 2026-08-03, corrections to the gate B reading (from review)
+## 2026-08-03, Corrections to the gate B reading (from review)
 
 Two interpretation fixes to the 2026-08-01 gate B entry, which over-read the follows_clean number.
 
@@ -96,11 +96,11 @@ Also logged for completeness. Gate B yield falls with difficulty (corruptible it
 
 Net effect on the argument: none of the load-bearing claims depended on the internal-copy reading. The read-back patch (which corrupts a written value and shows the answer follows the residual at that position, on a model that does not re-derive) is the causal result, and it is unaffected.
 
-## 2026-08-03, protection reworked after review, KL meter subtlety
+## 2026-08-03, Protection reworked after review, KL meter subtlety
 
 After fixing the lesion to fire during prefill (so direct and cot face the same squeeze) and moving the damage meter to neutral text, the alpha=0.10 target lesion gives kl_task=0.145 (a real dose, versus the old 0.03 that moved nothing) and kl_neutral=1.30. The large gap between the two meters is itself worth noting: the lesion resamples from a bank of reasoning-state vectors, so applying them to neutral prose is heavily off-distribution and inflates neutral KL, while applying them to task context is milder. So neither meter is a clean "generic damage" number: task KL folds the targeted effect in (the reviewer's point), neutral KL is inflated by bank-versus-text mismatch. We report both and lean on the matched-damage control arm (same alpha, different layer window) rather than on either KL alone for interpretation, and match cross-family on neutral KL since it uses the same neutral text for both families. Full dissociation result to follow when both families finish.
 
-## 2026-08-03, protection dissociation result (corrected lesion, alpha 0.10)
+## 2026-08-03, Protection dissociation result (corrected lesion, alpha 0.10)
 
 Both families, clean/target/control arms, n=40 per cell, lesion firing during prefill and decode, dose kl_task ~0.15 (target and control matched within ~0.01). The comparison that matters is at difficulties where both families still have accuracy headroom, since entity-tracking clean accuracy floors quickly (0.97, 0.60, 0.12, 0.03 at d=2,4,8,16) while variable-chain clean stays high (0.97 through d=8). In the headroom cells (d=2, 4):
 
@@ -113,11 +113,11 @@ Honest caveats. First, the lesion is blunt: it damages the re-reading of written
 
 Net: the dissociation prediction (internal lesion hurts parallel storage more than serial chains) holds where it can be cleanly measured, at roughly a three to one ratio, robust to the lesioned window.
 
-## 2026-08-03, frontier read-back (behavioral, via API assistant prefill)
+## 2026-08-03, Frontier read-back (behavioral, via API assistant prefill)
 
 We cannot patch residuals through an API, but the behavioral half of the read-back test runs at frontier scale: ask the model to solve a variable chain writing each value, corrupt one written value, prefill the assistant turn with the corrupted partial trace, and let it continue. DeepSeek V3.2 (671B), d=10, n=60: corrupting a written value flips the final answer 0.78 of the time (follows_clean 0.12, neither 0.10). So a frontier model reads its own written value back rather than recomputing from the operands, at a higher rate than the 7B distill (which was ~0.42 at d=8). The read-back mechanism is not a small-model artifact. Claude Sonnet 4.5 (same protocol) flips 0.97 of the time (follows_clean 0.03, neither 0.00). So read-back reliability increases with model capability: 7B ~0.42, V3.2 0.78, Sonnet 4.5 0.97. More capable models depend on their written intermediates more, not less, which cuts against the intuition that stronger models would keep more in their heads and matters for monitorability (the trace stays load-bearing at the frontier). Caveat: this is the behavioral half only (answer follows the corrupted token); the residual-patch causal isolation is the 7B result, since APIs give no white-box access.
 
-## 2026-08-04, hardening round: replication and real-benchmark generality
+## 2026-08-04, Hardening round: replication and real-benchmark generality
 
 Closing the gaps flagged in hardening.md.
 
@@ -137,7 +137,7 @@ What this validates: the probing and activation-extraction machinery works. The 
 
 What this does NOT show: early answer computation. R^2 is already 0.80 two steps into a twelve-step chain, which cannot be the answer being computed early, because steps three through twelve have not happened. It is the start-value confound: the final answer is start plus a sum of smaller signed args, so the 3-digit start dominates the answer's variance and is decodable from the first position, inflating early decodability. A clean pre-CoT-decoding test would regress out the start (decode answer-minus-start, the genuinely computed part); we did not, so we do not claim early computation from this curve. Recorded as a validation success and an honest non-claim on the pre-CoT-decoding phenomenon.
 
-## 2026-08-04, swap control: the residual is a readable value register (fix #3)
+## 2026-08-04, Swap control: the residual is a readable value register (fix #3)
 
 The read-back patch invited the objection that overwriting the value token's residual to clean and getting the clean answer is injecting the answer. The swap control refutes it. In addition to patching the residual to the clean value, we patch it to an arbitrary third value (clean plus 2 delta, distinct from both clean and corrupt) and ask which answer the continuation reaches. Qwen2.5-7B-Instruct, d=10, n=135 (113 with a corruption effect):
 

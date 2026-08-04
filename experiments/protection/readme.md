@@ -1,4 +1,4 @@
-# protection: the serial/parallel dissociation, causally
+# Protection: the serial/parallel dissociation, causally
 
 Question: does squeezing the internal residual stream hurt entity tracking (state held internally) more than variable chains (state written on the page)?
 

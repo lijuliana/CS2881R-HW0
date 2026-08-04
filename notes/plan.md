@@ -1,4 +1,4 @@
-# experimental plan
+# Experimental plan
 
 Question: when does a reasoning model hold intermediate state in activations vs write it into tokens, what mechanism performs the handoff, and is the crossover predictable?
 
@@ -6,7 +6,7 @@ The memory hierarchy hypothesis, stated so it can fail: the residual stream is a
 
 Terminology: "workspace" means the task-relevant subspace of the residual stream at reasoning-time positions, located empirically (phase 2), not assumed.
 
-## models
+## Models
 
 - primary ladder: DeepSeek-R1-Distill-Qwen 1.5B / 7B / 14B / 32B. Actual reasoning models, one family, four sizes. All white-box work here.
 - counterparts: Qwen2.5-Math / Qwen2.5-Instruct at matched sizes, to separate "reasoning-trained" from "big".
@@ -14,7 +14,7 @@ Terminology: "workspace" means the task-relevant subspace of the residual stream
 - Gemma-2-9B with Gemma Scope SAEs for cheap feature-level discovery passes, since public SAEs exist.
 - API models (Bedrock, Anthropic) for behavioral sweeps only.
 
-## task families
+## Task families
 
 Requirements: a scalar difficulty knob d, difficulty decoupled from required output length, low-d instances solvable with no CoT, intermediate values that are exactly specifiable so probes and corruptions have ground truth.
 
@@ -27,7 +27,7 @@ Two knobs on purpose: serial depth (families 1, 2, 4) vs parallel storage load (
 
 All generators seeded, instance-deduplicated, with held-out difficulty levels for extrapolation tests.
 
-## phase 0.5: gate experiments (week 1, before anything expensive)
+## Phase 0.5: gate experiments (week 1, before anything expensive)
 
 Two cheap pilots run before probe training or large sweeps, because their outcomes decide the paper's framing.
 
@@ -36,7 +36,7 @@ Two cheap pilots run before probe training or large sweeps, because their outcom
 
 Sampling config, fixed here up front: temperature 0.6 top-p 0.95 for R1-distills (their recommended settings), greedy for probing runs where determinism matters, with a sensitivity check between the two, since trace structure shifts with sampling and "CoT length increased" is noisy at temperature.
 
-## phase 1: establish the phenomenon (behavioral, cheap, mostly API + small GPU)
+## Phase 1: establish the phenomenon (behavioral, cheap, mostly API + small GPU)
 
 For each model and task family, sweep d and measure under three conditions: forced direct answer (no CoT), free generation, forced CoT. Record accuracy, CoT length, and which intermediate values appear verbatim in the trace (exact matching against ground truth, which our synthetic tasks make possible).
 
@@ -50,7 +50,7 @@ Framing note: recent work already establishes the correlational premise that act
 
 Design point: also measure direct-answer accuracy at each d. If externalization onset simply tracks the point where direct answering fails, that is consistent with the hypothesis, but if models externalize far below that point (as overthinking work suggests) or far above it, the simple cost-benefit story is wrong and we need to say so.
 
-## phase 1.5: the protection experiment (early, reuses gate A machinery and phase 1 conditions)
+## Phase 1.5: the protection experiment (early, reuses gate A machinery and phase 1 conditions)
 
 The direct factorial at the heart of the question: accuracy under internal lesion x answer condition (direct vs CoT) x difficulty d. If written tokens carry state that would otherwise live in the residual stream, CoT should protect accuracy against internal lesions, and the size of that protection should depend on d in a way that discriminates hypotheses. Three outcome patterns written down in advance (see hypotheses.md): protection roughly constant in d; protection shrinking at high d (externalization is partial, the hardest problems still lean on internal state); protection growing with d (easy problems write nothing down, so there is nothing external to fall back on).
 
@@ -64,7 +64,7 @@ The stronger per-instance version: within a fixed (lesion, d) cell, regress lesi
 
 2d. workspace identification. Two independent definitions, on purpose. First, DAS-style interchange interventions find the subspace carrying v_i at reasoning positions, with the Makelov illusion check. Second, a probe-derived subspace from 2a, which involves no optimization against causal effect. DAS optimizes for behavioral effect, so "ablating the DAS subspace changes behavior" is close to circular, and worse, DAS could select a direction whose ablation mimics a low-confidence high-verbalization regime rather than removing storage. Phase 3a therefore requires its compensation signature under both definitions, plus under optimization-free layer-window lesions, and the DAS subspace is frozen on a held-out task family before being tested cross-task.
 
-## phase 3: causal capacity interventions (the core contribution)
+## Phase 3: causal capacity interventions (the core contribution)
 
 Two directions, because the hypothesis is about a two-way trade.
 
@@ -83,34 +83,34 @@ Controls that separate targeted effect from generic degradation, all reported in
 
 3b. squeeze external, watch internal. Constrain the token channel: hard token budgets, filler-token replacement of the trace (Pfau-style, separating compute-slots from content), paraphrase rewriting (destroys steganographic content, keeps semantics), structured truncation. The paraphrase condition gets a self-paraphrase control (same content regenerated at a different seed) to bound plain distribution shift, since R1 traces have a distinctive voice and rewriting it is itself off-distribution. Measure internal load: probe decodability of intermediate values at late positions, dimensionality of the phase 2d subspace occupancy. Hypothesis predicts internal representations work harder (more values decodable internally, longer persistence) when writing is blocked, up to a capacity ceiling where accuracy breaks. The filler condition is the sharpest control: if filler tokens rescue performance as well as content tokens, the channel is compute, not memory, and the memory hierarchy framing is wrong for that task.
 
-## phase 4: the onset law
+## Phase 4: the onset law
 
 Fit the externalization onset d* (from phase 1 curves, defined by a fixed threshold on externalization fraction, with sensitivity analysis over threshold choice) as a function of model size, layer count, and task family, across the R1-distill ladder plus Llama family. Candidate laws to compare, chosen before fitting: d* linear in depth (serial budget story), d* logarithmic (parallel-scan story, per graph-connectivity theory), d* tracking direct-answer failure point (cost-benefit story). Model comparison by held-out difficulty levels and held-out model sizes, not fit quality alone. Honest caveat stated in the paper: four sizes per family spanning 28 to 64 layers discriminate linear from log only weakly; held-out-difficulty extrapolation is the real test, and the extra Qwen base sizes from phase 1 help. Check whether one law spans families or each family gets its own, and whether reasoning-trained models shift d* relative to matched base models (RL moving the write threshold is itself a finding, either direction).
 
 Also look for a mechanistic transition marker near d*: does anything discontinuous happen in the phase 2 maps (probe decodability, read-back fraction, receiver-head attention mass) as d crosses d*, or is the behavioral crossover smooth underneath, Schaeffer-style? Both outcomes are informative and both are visible in the design; claim a phase transition only with a continuous-metric discontinuity, not a thresholded-metric one.
 
-## phase 5: format geometry (time permitting, or as the applied payoff)
+## Phase 5: format geometry (time permitting, or as the applied payoff)
 
 Compare scratchpad formats at matched d: free prose, structured state dumps (explicit variable tables), code-like traces. Measure externalization efficiency (accuracy per written token), read-back fraction, and whether the phase 2c receiver circuitry differs by format. The hierarchy view predicts formats that make values easy to address (structured, code-like) raise the effective external capacity and shift d* upward. This is the section with direct design implications: if structured external memory measurably beats prose at equal token cost, that is actionable for reasoning-model training, and it connects to monitorability since a well-used external memory is a readable one.
 
-## evaluation choices
+## Evaluation choices
 
 - exact-match on synthetic tasks; no LLM judging anywhere a program can grade
 - every causal claim gets: resample ablation primary, zero/mean as robustness, logit-diff and prob metrics both reported
 - seeds: 3 minimum per cell for generation-based numbers; probe results with train/val/test splits across instances, never positions of the same instance
 - effect sizes with bootstrap CIs over instances; no bare p-values
 
-## compute plan and limitations
+## Compute plan and limitations
 
 - phase 1: mostly API (Bedrock) plus 1x A100/H100 node for open models with vLLM. Cheap.
 - phase 2 and 3: the bottleneck, and bigger than classic patching budgets suggest, because interventions happen during autoregressive generation with regeneration after each intervention, per instance per dose per seed. Budgeting is done in generated-tokens-under-intervention, not forward passes on fixed prompts. 7B is the workhorse, 14B confirmation only, 32B only for headline replications. Needs KV-cache-preserving intervention hooks; the nnsight/vLLM plumbing is its own engineering task with real time allocated. Attribution patching screens first, exact patching on the shortlist.
 - 70B Llama runs: 8x A100/H100 node, reserved for the final cross-family check only.
 - known limitations to state up front: R1-distills are distilled, not RL-trained from scratch, so RL-specific claims are limited (mitigated partly by the base-model comparison); DAS subspaces are optimization products and inherit the illusion risk even with checks; synthetic tasks trade ecological validity for ground truth, which is the right trade for causal work but caps the generality claims; probing establishes representation, not use, which is why every probe result that matters is paired with a patching result.
 
-## headline and fallback
+## Headline and fallback
 
 Primary headline, contingent on gate A: induced internal scarcity causes compensatory externalization, with the four-gate conjunction as evidence. Pre-committed fallback if gate A is flat or 3a fails its conjunction: the eviction and read-back dynamics of the hierarchy (2b, 2c) plus the onset law (4), which stand on their own. A 3a null under passing controls is itself reported, as evidence that the write policy is set by training rather than adapted online, which bears directly on monitorability arguments that assume necessity.
 
-## order of operations
+## Order of operations
 
 Gates A and B first, week 1, on whatever single GPU comes up soonest. Phase 1 alongside them (behavioral, cheap, and its curves pick the d ranges for everything else). Phase 2 on 7B once probing infrastructure is up. Phases 3 and 4 depend on 1 and 2 and on the gates. Phase 5 floats.

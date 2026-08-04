@@ -1,4 +1,4 @@
-# incompressibility of written values
+# Incompressibility of written values
 
 Question: under a token budget, does the model compress by dropping values, or only by cutting prose?
 

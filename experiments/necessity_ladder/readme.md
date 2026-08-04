@@ -1,4 +1,4 @@
-# necessity of externalization
+# Necessity of externalization
 
 Question: among traces that get the right answer on a serial chain, do any omit intermediate values? If complete externalization is necessary for depth, the answer is no.
 

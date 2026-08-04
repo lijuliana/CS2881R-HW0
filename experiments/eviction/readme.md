@@ -1,4 +1,4 @@
-# eviction vs redundant cache
+# Eviction vs redundant cache
 
 Question: with writing made exogenous (teacher-forced traces that either write or omit one value), is the value less decodable from the current hidden state after it was written than after it was suppressed?
 

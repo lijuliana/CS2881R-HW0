@@ -1,8 +1,8 @@
-# response to internal review (2026-08-02)
+# Response to internal review (2026-08-02)
 
 An adversarial read of the synthesis and code came back with six substantive criticisms. Most are right. This file records what I accept, what I push back on, and the resulting change of plan. The short version: the behavioral results confirm known expressivity theory and cannot lead; the causal read-back mechanism, done cleanly, is the only new thing, so the project reorients around it.
 
-## accepted, changing the work
+## Accepted, changing the work
 
 1. **The necessity result is close to circular.** On variable chains the only algorithm is running the arithmetic, and the trace format writes each step as `x = y op z = value`, so the penultimate value is on the page whenever the answer is. "Every correct deep trace contains every value" is largely forced by task and format, not a memory mechanism. Fixes now planned: (a) lead with the causal externalization measure (corrupt the value, does the answer move), not surface match; (b) run the necessity test on dag_reachability, where the answer is a node label and intermediates are not accumulated into the answer, so the format does not force them onto the page; (c) decompose the surface fraction by intermediate position, since a format-forced result should be carried by the last one or two steps.
 
@@ -14,11 +14,11 @@ An adversarial read of the synthesis and code came back with six substantive cri
 
 5. **The capacity law is unsupportable on five collinear points.** Already downgraded to an open question in synthesis and results-log after the Llama ladder showed depth and log-params collinear. Keeping it demoted; it does not lead.
 
-## partially pushed back
+## Partially pushed back
 
 6. **Novelty ceiling vs Merrill-Sabharwal.** Fair that the behavioral claims (one forward pass is roughly one serial op; serial needs writing, parallel does not) are the shadow of known theory. But the theory says CoT *can* provide serial steps; it does not say a trained reasoning model *does* route computation through the written token at value granularity, nor that it keeps a redundant internal copy, nor that written state is incompressible. Those are mechanistic facts about a specific trained system, not corollaries of an expressivity bound. The review agrees the causal read-back mechanism is new if executed cleanly. So the reorientation is not a retreat, it is putting the new thing in front and the confirmatory behavior behind it as context.
 
-## revised priority order
+## Revised priority order
 
 1. residual patch-back on gate B corrupted continuations: token-path vs internal-path decomposition, multi-sample, CIs. This is the paper.
 2. necessity on dag_reachability plus position decomposition, to kill the circularity.
@@ -26,7 +26,7 @@ An adversarial read of the synthesis and code came back with six substantive cri
 4. eviction probe rebuilt around the written-minus-suppressed gap.
 5. everything else is context.
 
-## what actually happened (2026-08-04, closing the loop)
+## What actually happened (2026-08-04, closing the loop)
 
 The reorientation held, and the priority order mostly ran as written, with a few honest departures worth recording.
 

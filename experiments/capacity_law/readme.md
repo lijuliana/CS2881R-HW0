@@ -1,4 +1,4 @@
-# internal serial capacity
+# Internal serial capacity
 
 Question: how deep a serial chain does a model complete with no writing (direct condition), and does that depth track model depth or parameters?
 
