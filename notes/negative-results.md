@@ -6,6 +6,10 @@ Collected in one place so nothing is buried. Each entry: what we expected or tri
 
 We expected a difficulty threshold at which models switch from internal reasoning to writing. There is none. Externalization is at ceiling from the easiest problems, at every scale and family. This overturned the starting hypothesis (a memory hierarchy with a spill point) and became the paper's opening finding. Recorded: results-log 2026-08-01, synthesis section, paper section 4.
 
+## read-back does not generalize to GSM8K (a negative that became a finding)
+
+We ran the read-back corruption on GSM8K to test real-benchmark generality (fix C). It is essentially null: corrupting a written intermediate changes the answer 0.10 of the time versus a 0.05 resample floor (deep problems, n=63). The model recomputes the intermediate from the question and ignores the edit. This is not a depth effect (synthetic read-back is 0.64 to 0.80 across d=3 to 16), it is recomputability: GSM8K intermediates are shallow functions of the givens and can be recomputed in about one operation, so the model recomputes rather than reading back; variable-chain intermediates require re-deriving the whole chain, which the model cannot do internally, so it reads them back. The honest consequence is that the read-back mechanism's practical footprint is narrower than all chain-of-thought: it carries genuinely serial, non-recomputable state, and on problems with shallow-recomputable intermediates it does not fire. Recorded: results-log 2026-08-04. This is the most important negative of the hardening round because it scopes the central claim.
+
 ## experiments that came back inconclusive or null
 
 - **Gate A (does internal pressure induce more writing).** Dropped. The write policy is already saturated, so there was no compensation headroom to detect, and a coarse dose sweep overshot the accuracy cliff. Superseded by the read-back patch. Recorded: experiments/gate_a_capacity/readme.md, review-response.md.
