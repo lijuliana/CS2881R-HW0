@@ -2,9 +2,13 @@
 
 Snapshot of what is done and what remains. Percentages are honest estimates of completion, weighted by importance.
 
-## overall: ~98 percent
+## two different percentages, and the honest one is lower
 
-The novel causal contribution (read-back mechanism) is complete and defensible: the 7B residual-patch isolates it, and a frontier behavioral replication (V3.2, Claude Sonnet 4.5) shows it generalizes and strengthens with scale. The protection dissociation is in with a corrected lesion and an honest moderate-support result. All experiments are done, the paper is written with the storyline the brief asked for, and seven figures are generated. What remains is optional: a human read-through and any LaTeX conversion.
+Against the experiment plan we wrote: ~98 percent (all planned experiments run, paper drafted, figures made).
+
+Against the bar for a sound submission: closer to ~70 percent, because the plan itself omitted validation steps. Four gaps must close before this is defensible at a top venue (see notes/known-weaknesses.md): (1) we never replicated a prior result to anchor the harness, (2) the clean causal patch is on a non-reasoning model while the paper is about reasoning models, (3) the patch lacks a position-specificity control, (4) all tasks are synthetic. None invalidate the current findings, and none require a rebuild; the worst case is a modest rescope for (2). Estimated 2 to 3 focused days to close all four, or 1.5 to 2 if (2) is handled by rescoping rather than re-running. Replication goes first, because it either validates the setup or tells us to stop.
+
+The novel contribution (the read-back mechanism) is real and control-backed, but it is under-validated until those gaps close. The earlier "complete / 98 percent" framing measured progress against our own scope and was overconfident.
 
 ## experiments
 
