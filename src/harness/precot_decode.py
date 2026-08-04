@@ -77,7 +77,8 @@ def main():
     def target_val(inst):
         a = int(inst.answer)
         if args.target == "answer_minus_start":
-            return a - inst.meta["start"]
+            # the chain's start value is the first intermediate
+            return a - int(inst.intermediates[0][1])
         return a
 
     for k, inst in enumerate(insts):
