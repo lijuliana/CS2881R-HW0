@@ -30,9 +30,9 @@ Because externalization has no onset, the fittable quantity is the internal seri
 
 ## What would still change the picture
 
-- Gate A (running): if sub-cliff internal lesions *do* shift writing, clause "no load-triggered onset" needs qualifying: the onset may exist but sit below the easiest task we used. If lesions only degrade, the saturation picture holds.
-- Layer-band patch sweep (running): patching early vs mid vs late layers localizes which depths carry the read-back. If only mid and late bands revert the answer, the value is read from processed representations, not the raw token embedding.
-- Protection experiment (running): the differential prediction is that internal lesions hurt entity tracking more than variable chains, and CoT protects chains more than boxes. That is the causal test of clause 6, the strongest single claim.
+- The recomputability scope (settled, and it does change the picture): read-back does not fire on GSM8K because its intermediates are recomputable, so the mechanism is for genuinely serial state and its footprint is narrower than all chain of thought. A within-task recomputability manipulation (matched depth, intermediate recomputable vs not) would pin the threshold.
+- Lesion validity: the resample ablation is off-distribution for neutral text, so what it removes is not fully characterized; a mean-ablation of a probe-identified direction, or DAS with an illusion check, would sharpen the protection result.
+- The capacity law: a param-matched depth-varying model set (looped or depth-scaled transformers) would settle whether depth or scale sets internal serial capacity; we do not have one.
 
 ## How the project changed (major course corrections)
 
