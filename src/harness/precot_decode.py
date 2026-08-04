@@ -53,6 +53,10 @@ def main():
     ap.add_argument("--depth", type=int, default=12)
     ap.add_argument("--n", type=int, default=400)
     ap.add_argument("--layer-step", type=int, default=4)
+    ap.add_argument("--target", default="answer",
+                    choices=["answer", "answer_minus_start"],
+                    help="answer_minus_start removes the start-value confound, "
+                    "isolating the genuinely computed part of the answer")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
@@ -70,10 +74,15 @@ def main():
     answers, controls = [], []
     insts = [variable_chain(args.depth, 90_000 + s) for s in range(args.n)]
     nbuckets = 6
+    def target_val(inst):
+        a = int(inst.answer)
+        if args.target == "answer_minus_start":
+            return a - inst.meta["start"]
+        return a
+
     for k, inst in enumerate(insts):
-        ans = int(inst.answer)
-        answers.append(ans)
-        controls.append(int(insts[(k + 1) % args.n].answer))
+        answers.append(target_val(inst))
+        controls.append(target_val(insts[(k + 1) % args.n]))
         text, ends, _ = build_trace(inst, write_target=True)
         full = inst.prompt + "\n" + text
         enc = tok(full, return_offsets_mapping=True)
