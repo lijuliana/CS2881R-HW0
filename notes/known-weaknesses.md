@@ -2,6 +2,13 @@
 
 Honest self-critique, ranked by how much a reviewer (or a careful re-read) could use it against the paper. The first four are the ones that matter.
 
+## status of the fixes (2026-08-04 hardening round)
+
+- Weakness 1 (replication): PARTLY CLOSED. Truncation faithfulness (Lanham) reproduced on our tasks via API (A2). A white-box answer-decodability probe (A1) is running to also validate the probing machinery. 
+- Weakness 2 (causal result on non-reasoning model): IN PROGRESS. A reasoning-model patch attempt (D) is running; if it does not come out clean we rescope honestly.
+- Weakness 3 (patch position/value specificity): IN PROGRESS. Added a swap control (patch the residual to an arbitrary third value, test whether the answer follows that value); running (B).
+- Weakness 4 (only synthetic tasks): CLOSED AS A NEGATIVE. Read-back does not fire on GSM8K because its intermediates are recomputable from the givens; read-back is recomputability-gated, not universal. This scopes the claim honestly (see negative-results.md).
+
 ## crucial
 
 1. **No replication of any prior result.** We never reproduced an established finding on our own setup before extending it, so our harness has no validated anchor and our "we refute view X" claims rest on our framing of X, not on reproducing X and breaking it. Fix: reproduce one concrete result on our models and tasks, for example pre-CoT answer decodability (Reasoning Theater / 2603.01437) or a Lanham-style truncation faithfulness curve. If we recover their number, the setup is trustworthy. Needs white-box (GPU) for the decoding version; the faithfulness version is API-doable.
