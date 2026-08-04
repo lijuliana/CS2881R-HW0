@@ -147,4 +147,15 @@ The read-back patch invited the objection that overwriting the value token's res
 
 So overwriting that one residual with any value makes the final answer follow forward-from-that-value. It is a genuine value register, read and then propagated through the remaining steps, not an injected answer: the patched value is a mid-chain intermediate, and setting it to a third value the model never wrote produces the answer that value implies. This closes the position/value-specificity gap with a positive read-write demonstration rather than a restore-to-clean that could be read as circular.
 
+## 2026-08-04, reasoning-model causal patch (fix #2, closes positively)
+
+We had moved the clean patch to a non-reasoning model because the reasoning distill re-solves after its think block. The swap control lets us run it on the reasoning model after all. R1-Distill-Qwen-7B, d=10, n=91 (57 with a corruption effect):
+
+- corr_follows_corruption (behavioral read-back): 0.59
+- patch to clean -> follows clean 1.00 [1.00, 1.00]
+- patch to the third value -> follows the third value 0.74 [0.66, 0.82]
+- random patch -> follows clean 0.29 [0.20, 0.38]
+
+The random control is elevated here (0.29 vs 0.00 on the instruct model), and that is the post-think re-solve: about a third of the time the model re-derives the clean answer regardless of the patch. But the re-solve produces the clean answer, never the arbitrary third value, so the swap condition cuts through the confound. The answer follows the injected third value 0.74 of the time, which re-solving cannot produce, so it is confound-free evidence that the reasoning model reads the injected value out of the residual and propagates it. The causal read-back holds on the reasoning model, not only the instruct model, which closes the off-scope weakness: the paper's causal claim now covers reasoning models directly, with the swap condition as the clean measurement.
+
 Note on this file: it is the lab notebook, in dated order, including interim readings that were later revised. For the settled claims see notes/synthesis.md, for what did not work see notes/negative-results.md, and for the writeup see paper/main.md.
