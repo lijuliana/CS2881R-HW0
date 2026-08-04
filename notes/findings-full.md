@@ -33,11 +33,11 @@ The claim the findings add up to: for serial reasoning, chain of thought is not 
 
 **Result:** the answer follows the edit on 84 percent of items (Qwen2.5-7B-Instruct, d=10, n=141). Most of the rest follow neither (later arithmetic slips). Almost none recover the original from the unchanged earlier steps, which are still in context. Later computation depends on the written value.
 
-### 4. Restoring clean internal state at the corrupted token restores the clean answer
+### 4. The residual at the written token is a readable value register
 
-**Variable:** token text stays corrupted, but the residual-stream state at that position is overwritten with the clean state from the uncorrupted run; control arm gets a matched-norm random perturbation. **Measured:** whether the continuation returns to the clean answer.
+**Variable:** token text stays corrupted, but the residual-stream state at that position is overwritten, either with the clean state or with the state for an arbitrary third value the model never wrote; control arm gets a matched-norm random perturbation. **Measured:** which value the continuation's answer follows.
 
-**Result:** restoration reverts the answer on 97 percent of affected items (CI 94 to 99); the random control reverts 0 percent; replicates at d=20 (93 percent). The value is read out of the residual state at the written token, causally and specifically. Caveat: the patch restores the full residual state at that position, so it does not isolate the numerical value from everything else represented there.
+**Result:** restoring the clean state reverts the answer on 97 percent of affected items (CI 94 to 99), replicates at d=20 (93 percent), random control 0 percent. The stronger condition: overwriting the residual with an arbitrary third value makes the answer follow that value 76 percent of the time (CI 70 to 82), clean 0 percent. The residual at the written token is a readable value register, set it to any value and downstream computation reads and propagates that value. This rules out "the patch injects the answer," since the injected quantity is a mid-chain intermediate the model never produced. It holds on the reasoning model (R1-Distill-Qwen-7B: clean 100 percent, third value 74 percent), where the swap condition is confound-free because the post-think re-solve produces the clean answer, never the arbitrary third value, so the causal claim covers reasoning models directly. Caveat: the patch overwrites the whole residual at that position, but because different injected values yield answers following those values, the value is the causal quantity.
 
 ### 5. Reliance on written values increases with model capability
 
@@ -87,6 +87,20 @@ The claim the findings add up to: for serial reasoning, chain of thought is not 
 
 **Result:** most models sit at 1 to 2 steps; Llama-70B reaches about 4 to 5. Whether depth or parameter count sets d_int is unresolved: within a family the two are collinear (both correlate about 0.85 to 0.90 with d_int), and the one contrast favoring depth (80-layer Llama-70B over 61-layer DeepSeek 671B) is confounded by family and training. Filed as an open question, not a law.
 
+### 13. Read-back is gated by recomputability, not by raw depth
+
+**Variable:** task type, synthetic chains (intermediate = running total, recomputable only by re-deriving the whole chain) vs GSM8K (intermediate = shallow function of the givens, recomputable in about one operation). **Measured:** fraction of answers following a corrupted written intermediate.
+
+**Result:** on chains, read-back is strong at every depth (0.64 to 0.80 flip rate from d=3 to 16, so not depth-gated); on GSM8K it is essentially null (0.10 vs a 0.05 resample floor), because the model recomputes the intermediate from the question and ignores the edit. So the model reads a written value back precisely when recomputing it would exceed the one-step internal ceiling, and recomputes it otherwise. Read-back is the mechanism for carrying genuinely serial, non-recomputable state; its footprint is narrower than all chain of thought, and this is the main limit on generality to real problems. Caveat: shown by the chains-vs-GSM8K contrast plus the structural argument, not by a within-task recomputability manipulation.
+
+## Validation (replication of prior results)
+
+Before extending prior work we reproduced two known results on our own setup, which the project had been missing as an anchor.
+
+**Truncation faithfulness (Lanham et al. 2023).** Forcing an answer after a fraction of the model's own chain of thought gives accuracy monotonic in that fraction, collapsing when the late steps are removed (V3.2 near zero to 0.97, Sonnet 0.32 to 1.00). Reproduces the load-bearing-CoT result, and on strictly serial chains the curve is close to a step function, the extreme-faithful end of the spectrum.
+
+**Answer decodability from activations.** A linear probe reads the final answer from the residual at R-squared up to 0.96 with a control probe at chance, validating the activation-extraction and probing machinery the patch relies on. Honest non-claim: the probe's high early decodability is inflated by the start value correlating with the answer, so we do not read it as early computation; a start-controlled probe isolating the computed part is the clean pre-CoT-decoding test.
+
 ## Negative and null results
 
 ### N1. The starting hypothesis is not supported
@@ -126,6 +140,7 @@ Mod-97 arithmetic: a permutation control (scoring each trace against a different
 * Lesion result (finding 10): one model, one dose, n=40 per cell; the lesion also damages re-reading of written values, so the comparison is only clean at low-to-mid difficulty.
 * Budget result (finding 7): one model family, and the model is told the cap, so failure conflates cannot-compress with does-not-plan-for-the-cap.
 * Frontier read-back (finding 5) is behavioral only; the residual patch needs white-box access and is 7B-scale.
-* The patch (finding 4) restores full residual state, not the isolated value, so value-specificity is not yet shown.
+* The patch (finding 4) overwrites the full residual at the position; value-specificity is shown by the swap result (different injected values yield answers following them) but the co-located representation is not literally isolated.
+* Read-back is recomputability-gated (finding 13), the main limit on generality: it applies to genuinely serial, non-shortcuttable computation, and the one real-benchmark test (GSM8K) came back null for that reason.
 * Format results (finding 11) are behavioral; whether the read-back circuitry differs by format was not tested.
-* Synthetic tasks buy exact ground truth and controlled depth at the cost of generality; nothing here establishes the same allocation pattern for open-ended math, planning, or safety-relevant reasoning.
+* Synthetic tasks buy exact ground truth and controlled depth at the cost of generality; the same allocation pattern is not established for open-ended math, planning, or safety-relevant reasoning.
