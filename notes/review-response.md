@@ -25,3 +25,19 @@ An adversarial read of the synthesis and code came back with six substantive cri
 3. protection experiment (running): causal test of the serial/parallel split.
 4. eviction probe rebuilt around the written-minus-suppressed gap.
 5. everything else is context.
+
+## what actually happened (2026-08-04, closing the loop)
+
+The reorientation held, and the priority order mostly ran as written, with a few honest departures worth recording.
+
+1. The residual patch-back became the centerpiece, but on a non-reasoning model (Qwen2.5-7B-Instruct), not on the reasoning distill. The teacher-forcing diagnostic showed the reasoning model re-solves after its think block, so the corrupted trace is re-derived rather than continued, which the patch cannot cleanly probe. On the instruct model it is clean: corrupt flips the answer 84 percent of items, restoring the residual reverts 97 percent, random control 0 percent. Later replicated behaviorally at frontier scale via API assistant-prefill (V3.2 0.78, Sonnet 4.5 0.97), where read-back reliability rises with capability.
+
+2. The DAG de-circularization was run and came back inconclusive: every node is in the prompt and the model names many while searching, so externalization does not discriminate. Dropped. The circularity is instead answered by the read-back result (the written value is causally used) plus the position decomposition.
+
+3. Protection ran, and a second review caught a real bug first: the lesion fired only on decode, so the direct condition was barely touched. Fixed to lesion during prefill, metered damage on neutral text against a control arm, reran at a dose that bites. Result is moderate support (internal lesion hurts entity ~3x more than chains where both have headroom, robust to layer window), reported with the blunt-lesion caveat.
+
+4. The eviction probe was not rebuilt. Once the patch-back landed cleanly it subsumed the coexistence question, and the probe's validity problems were not worth the GPU time. Dropped rather than rebuilt.
+
+5. The "verification regime" and "internal copy persists" readings were withdrawn entirely after a later review pointed out that follows_clean is re-derivation from the in-context prompt, not evidence of a stored internal copy.
+
+Net: the paper leads with the causal read-back mechanism and its frontier generality, with the behavioral results as theory-predicted context, exactly the reorientation this file proposed.
