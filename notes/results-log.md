@@ -137,4 +137,14 @@ What this validates: the probing and activation-extraction machinery works. The 
 
 What this does NOT show: early answer computation. R^2 is already 0.80 two steps into a twelve-step chain, which cannot be the answer being computed early, because steps three through twelve have not happened. It is the start-value confound: the final answer is start plus a sum of smaller signed args, so the 3-digit start dominates the answer's variance and is decodable from the first position, inflating early decodability. A clean pre-CoT-decoding test would regress out the start (decode answer-minus-start, the genuinely computed part); we did not, so we do not claim early computation from this curve. Recorded as a validation success and an honest non-claim on the pre-CoT-decoding phenomenon.
 
+## 2026-08-04, swap control: the residual is a readable value register (fix #3)
+
+The read-back patch invited the objection that overwriting the value token's residual to clean and getting the clean answer is injecting the answer. The swap control refutes it. In addition to patching the residual to the clean value, we patch it to an arbitrary third value (clean plus 2 delta, distinct from both clean and corrupt) and ask which answer the continuation reaches. Qwen2.5-7B-Instruct, d=10 (n=150 target; partial n=48 with 40 showing a corruption effect, final numbers on completion):
+
+- patch to clean -> answer follows clean 0.97
+- patch to the third value -> answer follows the third value 0.79, follows clean 0.00
+- random-direction patch -> follows clean 0.00
+
+So overwriting that one residual with any value makes the final answer follow forward-from-that-value. It is a genuine value register, read and then propagated through the remaining steps, not an injected answer: the patched value is a mid-chain intermediate, and setting it to a third value the model never wrote produces the answer that value implies. This closes the position/value-specificity gap with a positive read-write demonstration rather than a restore-to-clean that could be read as circular.
+
 Note on this file: it is the lab notebook, in dated order, including interim readings that were later revised. For the settled claims see notes/synthesis.md, for what did not work see notes/negative-results.md, and for the writeup see paper/main.md.
