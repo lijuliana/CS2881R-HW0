@@ -10,3 +10,4 @@ results/raw/
 *.safetensors
 .env
 .DS_Store
+data/
