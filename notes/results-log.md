@@ -139,11 +139,11 @@ What this does NOT show: early answer computation. R^2 is already 0.80 two steps
 
 ## 2026-08-04, swap control: the residual is a readable value register (fix #3)
 
-The read-back patch invited the objection that overwriting the value token's residual to clean and getting the clean answer is injecting the answer. The swap control refutes it. In addition to patching the residual to the clean value, we patch it to an arbitrary third value (clean plus 2 delta, distinct from both clean and corrupt) and ask which answer the continuation reaches. Qwen2.5-7B-Instruct, d=10 (n=150 target; partial n=48 with 40 showing a corruption effect, final numbers on completion):
+The read-back patch invited the objection that overwriting the value token's residual to clean and getting the clean answer is injecting the answer. The swap control refutes it. In addition to patching the residual to the clean value, we patch it to an arbitrary third value (clean plus 2 delta, distinct from both clean and corrupt) and ask which answer the continuation reaches. Qwen2.5-7B-Instruct, d=10, n=135 (113 with a corruption effect):
 
-- patch to clean -> answer follows clean 0.97
-- patch to the third value -> answer follows the third value 0.79, follows clean 0.00
-- random-direction patch -> follows clean 0.00
+- patch to clean -> answer follows clean 0.97 [0.94, 1.00]
+- patch to the third value -> answer follows the third value 0.76 [0.70, 0.82], follows clean 0.00
+- random-direction patch -> follows clean 0.00 [0.00, 0.01]
 
 So overwriting that one residual with any value makes the final answer follow forward-from-that-value. It is a genuine value register, read and then propagated through the remaining steps, not an injected answer: the patched value is a mid-chain intermediate, and setting it to a third value the model never wrote produces the answer that value implies. This closes the position/value-specificity gap with a positive read-write demonstration rather than a restore-to-clean that could be read as circular.
 
