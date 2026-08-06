@@ -28,7 +28,7 @@ Technical report, figures in results/figures.
 
 **Result.** [FINAL TABLE PENDING AIME FREE CELL; partial:]
 
-| dataset | direct acc (non-cap) | free acc (non-cap) | direct cap rate | free cap rate |
+| Dataset | Direct acc (non-cap) | Free acc (non-cap) | Direct cap rate | Free cap rate |
 |---|---|---|---|---|
 | GSM8K | 0.10 (0.12) | 0.84 (0.99) | 0.29 | 0.46 |
 | MATH-500 | 0.11 (0.19) | 0.65 (0.76) | 0.47 | 0.23 |
@@ -78,7 +78,7 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Result.**
 
-| model | d=1 | d=2 | d=4 | d=8 | d_int | channel verified |
+| Model | d=1 | d=2 | d=4 | d=8 | D_int | Channel verified |
 |---|---|---|---|---|---|---|
 | Qwen2.5-7B-it | 1.00 | 0.96 | 0.04 | 0.00 | ~2-3 | yes (4 tok) |
 | Llama-3.1-8B | 1.00 | 0.47 | 0.00 | 0.00 | ~2 | yes (2-4 tok) |
@@ -96,15 +96,15 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Result.**
 
-| measurement | value |
+| Measurement | Value |
 |---|---|
-| gate B flip rate, d=4/8/16/32 (reasoning 7B) | 0.31 / 0.42 / 0.50 / 0.36 |
-| patch: corrupt flips answer (Qwen2.5-7B-it, d=10, n=141) | 0.84 |
-| patch to clean state, token still corrupt: follows clean | 0.97 [0.94, 0.99]; d=20: 0.93 |
-| patch to arbitrary third value: follows that value | 0.76 [0.70, 0.82]; clean 0.00 |
-| random-direction patch: follows clean | 0.00 [0.00, 0.01] |
-| same on reasoning model (R1-distill-7B): clean / third value | 1.00 / 0.74 [0.66, 0.82] |
-| layer-band sweep (early/mid/late) revert | 0.96 / 0.97 / 0.94 |
+| Gate B flip rate, d=4/8/16/32 (reasoning 7B) | 0.31 / 0.42 / 0.50 / 0.36 |
+| Patch: corrupt flips answer (Qwen2.5-7B-it, d=10, n=141) | 0.84 |
+| Patch to clean state, token still corrupt: follows clean | 0.97 [0.94, 0.99]; d=20: 0.93 |
+| Patch to arbitrary third value: follows that value | 0.76 [0.70, 0.82]; clean 0.00 |
+| Random-direction patch: follows clean | 0.00 [0.00, 0.01] |
+| Same on reasoning model (R1-distill-7B): clean / third value | 1.00 / 0.74 [0.66, 0.82] |
+| Layer-band sweep (early/mid/late) revert | 0.96 / 0.97 / 0.94 |
 
 **Interpretation.** The residual at the written token is a readable value register: set it to any value and the downstream computation reads and propagates that value, which also rules out answer injection (the injected quantity is a mid-chain intermediate the model never wrote). On the reasoning model the random arm is elevated (0.29) because the post-think phase re-solves from the prompt; the third-value condition is immune to that confound (re-solving yields clean, never the injected value). Returns to the clean answer under corruption are re-derivation from the in-context prompt, not evidence of an internal copy; no internal-copy claim is made. The register is carried redundantly across depth (no single-circuit localization claimed). The start-controlled probe adds that the computed part of the answer is not decodable early (0.27 two steps in, 0.83 at the end): the computation emerges as the steps are written.
 
@@ -114,7 +114,7 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Result.**
 
-| model | follows corruption |
+| Model | Follows corruption |
 |---|---|
 | R1-distill-7B (d=8) | 0.42 |
 | DeepSeek V3.2, 671B (d=10) | 0.78 |
@@ -136,9 +136,9 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Result.**
 
-| budget, d=16 | tokens | accuracy | externalization |
+| Budget, d=16 | Tokens | Accuracy | Externalization |
 |---|---|---|---|
-| free | 466 | 1.00 | 1.00 |
+| Free | 466 | 1.00 | 1.00 |
 | 256 | 184 | 0.93 | 0.98 |
 | 128 | 128 (cap) | 0.00 | 0.72 |
 
@@ -150,12 +150,12 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Result.**
 
-| format, d=48 | accuracy | tokens |
+| Format, d=48 | Accuracy | Tokens |
 |---|---|---|
-| code with values | 1.00 | 555 |
-| prose | 1.00 | 1105 |
-| state dump | 0.07 | 3848 |
-| code without values | 0.97 | 440 |
+| Code with values | 1.00 | 555 |
+| Prose | 1.00 | 1105 |
+| State dump | 0.07 | 3848 |
+| Code without values | 0.97 | 440 |
 
 Within the no-values code format, per-instance externalization correlates with correctness at +0.74 (accuracy 0.58 when under half the values get written, 1.00 when nearly all do).
 
