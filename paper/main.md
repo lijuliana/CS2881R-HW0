@@ -1,4 +1,4 @@
-# Serial reasoning state lives in the chain of thought, not J-space
+# J-Space and the Chain of Thought: Where Reasoning State Lives
 
 ## Research question and hypothesis
 
