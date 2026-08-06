@@ -20,15 +20,15 @@ Each finding states the manipulated variable, the measurement, and the result.
 
 ### I.1 Free vs direct across the difficulty ladder
 
-[results pending: tonight's sweep]
+Thinking vs bare-answer accuracy (non-truncated): GSM8K 0.99 vs 0.12, MATH-500 0.76 vs 0.19, AIME 2024 0.90 vs 0.00 (n=150/150/30). Bare-answer overrun of the 32-token budget climbs 0.29 / 0.47 / 0.80 down the ladder (told not to write, the model tries anyway), and median thinking length grows 1952 / 3503 / 11819 tokens.
 
 ### I.2 J-space ablation 2x2 (ablation on/off x direct/cot), GSM8K
 
-[results pending: tonight's calibrated 2x2]
+Frozen dose k=8, alpha=0.5. Cot accuracy 0.97 clean, 0.93 jlens, 0.93 random control: no targeted effect. Direct is floored for a 4B on GSM8K (0.00 to 0.03 in every arm), so no asymmetry could appear there; on synthetic chains with direct headroom the same calibrated ablation was also null. The anchor asymmetry does not replicate at a coherence-safe dose.
 
 ### I.3 Corrupting written intermediates in GSM8K worked solutions
 
-[results pending: tonight's read-back run]
+The answer follows a corrupted intermediate 0.87 of the time (n=84, resample floor 0.00). Together with V3.2's 0.10 on the same protocol, recomputability is model-relative: the 671B recomputes GSM8K intermediates and ignores edits, the 4B cannot and reads them back.
 
 ## Part II: mechanism supplement (synthetic families)
 

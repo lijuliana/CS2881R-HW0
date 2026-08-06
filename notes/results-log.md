@@ -170,4 +170,8 @@ Ladder (n=150/150/30, thinking vs bare-answer): non-truncated thinking accuracy 
 
 Edit test on GSM8K worked solutions (n=84): the answer follows a corrupted intermediate 0.87 of the time against a 0.00 resample floor. We predicted near-floor from the V3.2 result (0.10). The prediction failed, and the two results together revise the recomputability claim into its model-relative form: the 671B recomputes GSM8K intermediates and ignores edits, the 4B cannot and reads them back. Read-back fires when recomputing a value exceeds the model's internal capacity; what a frontier model recomputes, a small model must reread. Consistent with the chains capability trend (stronger models follow non-recomputable values more faithfully).
 
+## 2026-08-06, assignment core complete: J-space 2x2 on Qwen3-4B GSM8K
+
+Frozen dose by the pre-stated rule on Qwen3-4B neutral text: k=8, alpha=0.5. Result: cot accuracy 0.97 clean / 0.93 jlens / 0.93 random (n=30 per cell), so the targeted ablation does no more than matched random damage; direct is floored on GSM8K for a 4B (0.00 to 0.03 in every arm, 0.37 to 0.60 of direct attempts overrun the answer budget), so no differential could appear in that dimension. Combined with the synthetic-chain 2x2 (which does have direct headroom and was also null), the anchor ablation-by-condition asymmetry does not appear anywhere at doses verified harmless on neutral text. Remaining follow-up: dose escalation with neutral-text damage reported alongside.
+
 Note on this file: it is the lab notebook, in dated order, including interim readings that were later revised. For the settled claims see notes/synthesis.md, for what did not work see notes/negative-results.md, and for the writeup see paper/main.md.
