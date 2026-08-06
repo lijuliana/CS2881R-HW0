@@ -39,3 +39,4 @@ paper/icml/*.fls
 paper/icml/*.fdb_latexmk
 paper/icml/*.synctex*
 paper/icml/pdflatex*
+paper/icml/
