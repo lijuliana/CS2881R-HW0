@@ -40,8 +40,9 @@ import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from tasks.generators import variable_chain, entity_tracking  # noqa: E402
-from harness.generate import build_prompt, extract_answer  # noqa: E402
+from harness.generate import build_prompt, extract_answer, prompt_values  # noqa: E402
 from harness.protection import NEUTRAL_TEXTS  # noqa: E402
+from analysis.externalization import externalization_record  # noqa: E402
 
 
 class JSpaceAblator:
@@ -195,7 +196,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="Qwen/Qwen2.5-7B-Instruct")
     ap.add_argument("--lens-repo", default="neuronpedia/jacobian-lens")
-    ap.add_argument("--lens-file", default="qwen2.5-7b-it/lens.pt")
+    ap.add_argument("--lens-file", default="qwen2.5-7b-it/jlens/Salesforce-wikitext/Qwen2.5-7B-Instruct_jacobian_lens.pt")
     ap.add_argument("--layers", default="",
                     help="comma list; default = middle third of fitted layers")
     ap.add_argument("--k", type=int, default=8)
@@ -274,13 +275,20 @@ def main():
                     pred = extract_answer(text, cond)
                     correct, hit_cap, unparseable = classify(
                         pred, inst.answer, gen_tok, cap)
+                    ext = None
+                    if cond == "cot" and args.family == "variable_chain":
+                        # externalization under ablation: does a targeted
+                        # internal squeeze change how much gets written
+                        e = externalization_record(
+                            text, inst.intermediates, prompt_values(inst))
+                        ext = e["externalization_fraction"]
                     out.write(json.dumps({
                         "arm": arm, "condition": cond, "difficulty": d,
                         "seed": s, "k": args.k, "alpha": args.alpha,
                         "layers": layers, "correct": correct,
                         "hit_cap": hit_cap, "unparseable": unparseable,
                         "gen_tokens": gen_tok, "removed_rms": rms,
-                        "pred": pred[:40],
+                        "ext_frac": ext, "pred": pred[:40],
                     }) + "\n")
                     out.flush()
                 print(f"{arm}/{cond}/d={d} done", flush=True)
