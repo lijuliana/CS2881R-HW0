@@ -1,13 +1,16 @@
 # Findings summary
 
-Research question: When does a model maintain intermediate reasoning state internally, in its activations, and when does it write that state into its chain of thought? Does this allocation change as problems become harder or as either channel is constrained?
+Research question: When does a model's reasoning live in J-space, the concept workspace read out by the Jacobian lens, and when does it live in the written chain of thought? Does the split move as problems get harder or as either side is constrained?
 
 Terms used throughout:
 
-* **Internal workspace**: the model's activations during a forward pass. Always present, cannot be switched off; interventions can damage it (lesion) or overwrite parts of it (patch).
+* **J-space**: the model's active concept workspace, read and intervened on through a fitted Jacobian lens (per-layer maps whose readout is the concepts currently loaded; ablation projects out the preimages of the top active concepts). Our targeted internal instrument.
+* **Internal workspace**: the broader construct J-space samples from, the activations of a forward pass. Always present, cannot be switched off; coarser interventions damage it (residual lesion) or overwrite parts of it (residual patch). Findings established with the coarse instruments generalize the J-space picture from concept directions to the full residual stream.
 * **Token channel**: the chain-of-thought text written before the answer. Can be closed (force a bare answer), capped (token budget), or edited (corrupt a written value).
 * **d**: difficulty, the number of dependent steps in a synthetic problem (chained arithmetic, variable chains, box tracking). Every intermediate value has known ground truth.
 * **Externalization**: fraction of those ground-truth values that appear in the written trace.
+
+The argument runs J-space outward. A calibrated J-space ablation and a J-space patch decomposition are the primary internal instruments; the earlier residual-level lesion and full-residual patch are the coarse-grained versions that motivated them and now serve as robustness checks. The claims that survive at both grains are stated as internal-vs-external claims; the ones tested only at one grain say so.
 
 Each finding states the manipulated variable, the measurement, and the result.
 
