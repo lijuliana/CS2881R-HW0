@@ -1,127 +1,122 @@
 # J-space and the chain of thought: where reasoning state lives
 
-## Question and predictions
+## Research question and hypothesis
 
-When does a model's reasoning state live in J-space, the concept workspace read out by the Jacobian lens, and when does it live in the written chain of thought? We began from the natural hierarchy hypothesis, written down before any runs: the model reasons internally while a problem fits its workspace and starts externalizing when capacity is pressured, so writing should switch on at some difficulty, and ablating the workspace should hurt unwritten answers more than written ones.
+When a language model solves a multi-step problem, where do the intermediate results live: in J-space, the internal concept workspace that the Jacobian lens reads out of the model's activations, or in the chain of thought the model writes? We predicted, before running anything, that models use the internal workspace first and start writing intermediate results down only when problems get hard enough to overflow it. That predicts two things: easy problems should show little writing, and deleting the internal workspace (ablating J-space) should hurt answers produced without chain of thought more than answers produced with it.
 
-**Both predictions failed, in informative ways.** There is no difficulty at which writing switches on: models write everything from the easiest problems and cannot carry even short chains without writing. The written values are read back causally, through the residual at the written token. And the state that does stay internal is distinguished by being parallel rather than serial, or cheaply recomputable rather than genuinely sequential. The report defends that revised claim on the assignment model and datasets first, then with the synthetic-task mechanism experiments that explain the benchmark numbers, generalizing from J-space and CoT to internal and external memory.
+**Neither prediction held. Models write out every intermediate step even on trivial problems, they fail almost immediately when writing is forbidden, and a J-space ablation gentle enough to leave normal text generation intact changes nothing.** What we found instead, through editing and patching experiments, is that the written chain of thought is where the serial computation actually happens: the model reads its own written values back through the internal state at each written token, and the only state that stays internal is either parallel (many values needed at once, none depending on the others) or cheap to recompute from the problem statement. The report shows this on the assignment model and datasets first, then uses synthetic tasks to explain the mechanism behind the benchmark numbers.
 
-## Setup
+## Experiment design
 
-- **Assignment core**: Qwen3-4B with the fitted public Jacobian lens for that model (neuronpedia/jacobian-lens, qwen3-4b artifact). Datasets: GSM8K test; MATH-500; AIME 2024, by which we mean the 30 problems of AIME 2024 I and II as distributed in HuggingFaceH4/aime_2024. The three sets are the difficulty ladder. All revisions pinned in Reproducibility.
-- **Synthetic families** for mechanism work, where every intermediate value has exact ground truth and difficulty d (number of dependent steps) is decoupled from output length: variable chains (signed 2-digit ops on a 3-digit start), modular arithmetic, box tracking (5 boxes, swapped contents), DAG reachability. Seeded generators; replay tests validate the corruption arithmetic against the generators.
-- **Supporting models**: Qwen2.5-7B-Instruct (also lens-fitted), DeepSeek-R1-Distill-Qwen 1.5B/7B/14B (white-box); DeepSeek V3.2, R1-671B, Llama 3.x up to 70B, Claude Sonnet 4.5 (behavioral, via API).
-- **Sampling**: temperature 0.6, top-p 0.95 for chain-of-thought and thinking; temperature 0 for direct answers; fixed in advance.
-- **Dose discipline**: intervention strengths are calibrated and frozen on neutral text before any task cell runs, by rules stated before the calibration data existed.
-- **Bookkeeping**: every cell logs token-cap hits and unparseable answers separately from wrong answers; every direct cell logs generated token counts so channel closure is audited, not assumed. Tables show accuracy overall and on non-capped items where cap contamination matters.
-- **Externalization detector**: exact match of ground-truth values with numeral normalization, calibrated by a permutation control (score each trace against a different instance's values). False positives 0.00 to 0.08 on variable chains; mod-97 reached 0.72 at high difficulty and was benched for externalization measurement.
-- **Replication anchors, run before extending**: truncation faithfulness reproduces on our tasks (forcing an answer after a fraction of the model's own CoT gives accuracy monotonic in that fraction, V3.2 near 0 to 0.97, Sonnet 4.5 0.32 to 1.00, collapsing when late steps are removed), and a linear probe reads the final answer from the residual at R-squared 0.96 with a control probe at chance, validating the probing machinery the patch experiments rely on.
+The design has three axes, each with its own controls.
 
-## How much models write, and what happens when they cannot
+- **Difficulty**: the benchmark ladder GSM8K, MATH-500, AIME 2024 (easy to hard), and synthetic problems where difficulty d is the exact number of dependent steps.
+- **The written channel**: open (normal chain of thought or thinking), closed (the prompt demands only the final answer; we verify from token counts that the model really wrote nothing), capped (a hard token budget), or edited (we change one written value in the model's own work and let it continue).
+- **The internal side**: J-space ablation (remove the currently active lens concepts from the activations, with a random-directions ablation of identical size as the control), a coarser residual-stream lesion, and a residual-stream patch (overwrite the internal state at one written token with a state of our choosing).
 
-**Models write nearly every intermediate value even on the easiest problems.** On the synthetic chains, the fraction of intermediate values that appear in the written trace (externalization) sits between 0.93 and 1.00 at every difficulty from one step to sixty-four, for every model from 1.5B to 671B. Splitting by correctness sharpens this: among correct traces at sixteen or more steps, externalization is exactly 1.000 (n=1935 pooled across three model sizes) against roughly 0.5 among wrong ones, and the ceiling is uniform across early, middle, and late chain positions. A format explanation would concentrate the ceiling on the last steps, since early results could in principle be carried internally; they never are. We state the 1.000 as an association rather than necessity, because the trace format writes step results by construction; the causal footing comes in the next section.
+Interventions follow a fixed discipline. Ablation strength is chosen on neutral text before any task runs, by a rule stated in advance (the strongest dose keeping next-token agreement with the clean model at 0.80 or above and the perplexity ratio at 1.30 or below), so task effects cannot come from a dose that already breaks the model in general. Every cell logs three failure types separately, wrong answer, ran out of tokens, and no parseable answer, so accuracy effects are never confused with truncation. Predictions for each experiment were written down before it ran, with the opposite outcome stated as detectable.
 
-**Forced to answer with no written reasoning at all, models fail after one or two dependent steps.** If models write everything, the next question is what they can do when they cannot write. We prompt for the bare answer and verify from token counts that the model really wrote nothing:
+## Experiment details
 
-| Model | d=1 | d=2 | d=4 | d=8 | Channel verified |
+- **Assignment model and data**: Qwen3-4B, with the fitted public Jacobian lens for this exact model (neuronpedia/jacobian-lens). GSM8K test set; MATH-500; AIME 2024, meaning the 30 problems of AIME 2024 I and II as distributed in HuggingFaceH4/aime_2024. All revisions pinned in Reproducibility.
+- **Synthetic tasks**, used where causal work needs exact ground truth for every intermediate value: variable chains (start with a 3-digit number, apply signed 2-digit additions and subtractions, report the final value; d = chain length), modular arithmetic chains, box tracking (5 boxes whose contents get swapped; state is parallel, not chained), and DAG path-following. Generators are seeded, and replay tests confirm the corruption arithmetic matches the generators.
+- **Supporting models** for the mechanism experiments: Qwen2.5-7B-Instruct (also lens-fitted) and DeepSeek-R1-Distill-Qwen 1.5B/7B/14B white-box; DeepSeek V3.2, R1-671B, Llama 3.x up to 70B, and Claude Sonnet 4.5 through APIs, behavioral only.
+- **Sampling**: temperature 0.6, top-p 0.95 for chain of thought and thinking; temperature 0 for direct answers. Fixed in advance.
+- **Measurement calibration**: the externalization detector (does a known intermediate value appear in the trace) was checked by scoring each trace against a different problem's values; false positives are 0.00 to 0.08 on variable chains, but reach 0.72 on mod-97 chains at high difficulty, so mod-97 is excluded from externalization claims.
+- **Replication before extension**: two known results were reproduced on our setup before building on it. Cutting a model's chain of thought short degrades accuracy the way the faithfulness literature reports (keep 60 percent of the trace and V3.2 scores 0.00; keep all of it, 0.97; Sonnet 4.5 goes 0.32 to 1.00), and a linear probe reads the final answer from the activations at R-squared 0.96 while a control probe stays at chance, validating the probe and patch machinery.
+
+## Experimental results and analysis
+
+### Accuracy with and without written reasoning
+
+**Models write nearly every intermediate value even on the easiest problems.** On synthetic chains, the fraction of known intermediate values that appear in the written trace is 0.93 to 1.00 at every difficulty from 1 step to 64, for every model from 1.5B to 671B. Among correct traces at 16 or more steps it is exactly 1.000 (n=1935 across three model sizes), versus about 0.5 among wrong ones, and the ceiling is the same for early, middle, and late steps. If writing were just output formatting, models would sometimes skip early steps they could hold in their heads; they never do. We treat the 1.000 as a strong association rather than proof of necessity (the solution format asks for step results), and establish the causal role of the written values in the next subsection.
+
+**Forbidden from writing, models fail after one or two dependent steps.** We prompt for the bare answer and verify from token counts that nothing else was generated:
+
+| Model | d=1 | d=2 | d=4 | d=8 | Really wrote nothing? |
 |---|---|---|---|---|---|
-| Qwen2.5-7B-it | 1.00 | 0.96 | 0.04 | 0.00 | Yes (median 4 tok) |
-| Llama-3.1-8B | 1.00 | 0.47 | 0.00 | 0.00 | Yes (2-4 tok) |
-| Llama-3.3-70B | 1.00 | 1.00 | 0.93 | 0.03 | Yes (2-4 tok) |
-| V3.2 (671B) | 0.23 | 0.03 | 0.00 | 0.00 | Yes (2 tok) |
-| R1 distills | - | - | - | - | No (74-89 percent hit cap) |
+| Qwen2.5-7B-it | 1.00 | 0.96 | 0.04 | 0.00 | Yes (median 4 tokens) |
+| Llama-3.1-8B | 1.00 | 0.47 | 0.00 | 0.00 | Yes (2-4 tokens) |
+| Llama-3.3-70B | 1.00 | 1.00 | 0.93 | 0.03 | Yes (2-4 tokens) |
+| V3.2 (671B) | 0.23 | 0.03 | 0.00 | 0.00 | Yes (2 tokens) |
+| R1 distills | - | - | - | - | No (74-89 percent overran) |
 
-The R1 distills leak reasoning tokens in direct mode despite think-suppression, so their direct cells are excluded (the channel was not actually closed). Internal serial capacity is real, small, and model-dependent (d_int, the deepest reliably-direct depth, is 1 to 2 for most models and about 5 for Llama-70B); whether depth or parameter count sets it is unresolved, since the two are collinear within families. The ceiling is specifically about chains of unmemorizable random values: the same V3.2 that fails two synthetic steps answers 38 percent of GSM8K directly with one-word outputs, because natural problems are partly recomputable and memorizable. That contrast returns below as the boundary of when written values matter.
+The R1 distills kept generating reasoning despite the no-think template, so their cells are excluded: their channel was never actually closed. Internal capacity for chained computation is real but tiny, one to two steps for most models, about five for Llama-70B, and we cannot tell whether depth or parameter count sets it because the two grow together within model families. One scope note: these chains use random values that cannot be memorized. The same V3.2 that fails 2-step chains answers 38 percent of GSM8K correctly with one-word replies, because parts of natural problems can be recalled or recomputed in one step. That distinction, can the model recompute a value or not, turns out to govern everything below.
 
-**Qwen3-4B shows the same pattern on GSM8K, MATH-500, and AIME.** On Qwen3-4B, the free-direct gap is large at every rung, and the termination logging shows the model failing to comply with the no-writing instruction more often as problems harden: 0.29 of GSM8K direct attempts overrun the 32-token answer budget, rising to 0.80 on AIME. The harder the problem, the more the model tries to write even when told not to. The cost of the written channel is the cleanest difficulty readout of all: median thinking length grows 1952 to 3503 to 11819 tokens down the ladder.
+**Qwen3-4B on the assignment benchmarks shows the same dependence on writing, and it grows with difficulty.** Thinking-mode accuracy stays high while bare-answer accuracy sits near the floor on all three datasets. Two further patterns: told not to write, the model overruns its 32-token answer budget more often the harder the problem gets (0.29 of GSM8K attempts, 0.80 of AIME attempts), and the amount of thinking it writes when allowed grows steeply down the ladder (median 1952 tokens on GSM8K, 3503 on MATH-500, 11819 on AIME).
 
-| Dataset | Direct acc (non-cap) | Free acc (non-cap) | Direct cap rate | Free cap rate |
+| Dataset | Bare answer acc (non-truncated) | Thinking acc (non-truncated) | Bare-answer overrun rate | Thinking cap rate |
 |---|---|---|---|---|
 | GSM8K (n=150) | 0.10 (0.12) | 0.84 (0.99) | 0.29 | 0.46 |
 | MATH-500 (n=150) | 0.11 (0.19) | 0.65 (0.76) | 0.47 | 0.23 |
 | AIME 2024 (n=30) | 0.00 (0.00) | 0.67 (0.90) | 0.80 | 0.30 |
 
-Together these rule out the overflow picture: writing is not what happens when a workspace fills up, because the workspace never held a chain to begin with. But writing everything is compatible with two readings, a trace the model actually computes with, or a commentary produced alongside computation happening elsewhere. The corruption experiments decide between them.
+Writing is not overflow from a full workspace: the workspace never held a chain in the first place. But all of this is still consistent with two stories, a trace the model computes with, or a commentary alongside computation happening elsewhere. The editing experiments decide between them.
 
-## Corruption, patch, and budget results
+### Editing the model's written values
 
-**Editing one written value usually changes the final answer.** Corrupting the last written mention of a mid-chain value in a reasoning model's own trace flips the final answer 31, 42, 50, and 36 percent of the time at d = 4, 8, 16, 32 (n = 149, 146, 138, 128 corruptible items of 150; yield falls with d because only correct traces are corrupted, selecting harder cells toward easier instances). A pure narration reading predicts near zero. But a flip is ambiguous in two ways: the corrupted token also feeds any recomputation, and a reasoning model re-solves the problem after its think block, returning to the clean answer from the prompt rather than from any internal copy. The re-solve is a finding in itself (the think phase reads the trace, the answer phase re-derives from scratch), and it dictated the next design: run the causal version on a model that continues a worked trace straight to the answer.
+**Change one written value in the model's own work, and the final answer usually follows the change.** We take a correct trace, replace one mid-chain value (say 417 with 457), and let the model continue. On the 7B reasoning model the answer follows the edit 31, 42, 50, and 36 percent of the time at d = 4, 8, 16, 32 (n = 149, 146, 138, 128 editable items of 150; the yield falls with difficulty because only correct traces are edited). If the trace were commentary, edits would do nothing. Two ambiguities remain, though: the edited text also feeds any fresh recomputation, and reasoning models re-solve the problem from scratch after their think block, which pulls answers back to the correct value without any internal memory being involved. That re-solve behavior is a finding on its own (the think phase reads the trace; the answer phase re-derives), and it is why the decisive version runs on a model that continues a worked solution directly.
 
-**The answer follows whatever value we write into the internal state at that token.** The causal version overwrites the residual stream at the corrupted token (a band of middle layers, from that token to the end of the prefix) while leaving the visible text corrupt. On Qwen2.5-7B-Instruct at ten steps (n=141, 119 with a corruption effect), corruption flips the answer on 84 percent of items, and the items without an effect follow neither answer, so essentially nothing recomputes the value from the unchanged earlier steps still in context.
+**Overwriting the internal state at the edited token controls the answer, whatever value we write into it.** We overwrite the residual-stream activations at the edited token (middle layers) while leaving the visible text unchanged. On Qwen2.5-7B-Instruct at 10 steps (n=141):
 
-| Measurement | Value |
+| Intervention | Outcome |
 |---|---|
-| Patch to clean state, token still corrupt: follows clean | 0.97 [0.94, 0.99]; replicates at d=20: 0.93 [0.88, 0.97] |
-| Patch to arbitrary third value: follows that value | 0.76 [0.70, 0.82]; follows clean 0.00 |
-| Random-direction patch at matched norm: follows clean | 0.00 [0.00, 0.01] |
-| Reasoning model (R1-distill-7B, n=91): clean / third value | 1.00 / 0.74 [0.66, 0.82] |
-| Layer-band sweep, early/mid/late revert | 0.96 / 0.97 / 0.94 |
+| Edit the text only | Answer follows the edit on 0.84 of items |
+| Also restore internal state to the correct value | Answer returns to correct: 0.97 [0.94, 0.99]; at d=20: 0.93 |
+| Instead write a third, never-written value into the state | Answer follows that third value: 0.76 [0.70, 0.82] |
+| Write a random perturbation of the same size | Answer returns to correct: 0.00 [0.00, 0.01] |
+| Same experiment on the reasoning model (n=91) | Correct-restore 1.00; third value 0.74 [0.66, 0.82] |
 
-The third-value condition answers the objection that restoring clean state injects the answer: overwrite the residual with a value the model never wrote and the answer follows that value, forward-computed through the remaining steps. The same condition makes the reasoning-model result clean, because the post-think re-solve can produce the clean answer but never an arbitrary injected one; the elevated random arm there (0.29 versus 0.00 on the instruct model) is the re-solve, not the register. Restoring an early, middle, or late layer band works about equally, so the value is represented redundantly across depth and we claim no specific circuit. A start-controlled probe closes the loop on where the answer comes from: decoding the computed part of the answer (start value regressed out, since it inflates naive early decodability) rises from 0.27 two steps into a twelve-step chain to 0.83 at the end, control at chance, so the computation emerges as the steps are written rather than existing before them.
+The third-value row is the important one: the answer tracks whatever value sits in the internal state at that token, including values the model never wrote, computed forward through the remaining steps. So the state at a written token works like a memory slot that later computation reads. This also rules out the objection that restoring the correct state just injects the correct answer. On the reasoning model, the random-perturbation control is elevated (0.29, versus 0.00 on the instruct model) because of the re-solve behavior, but re-solving can only produce the correct answer, never the arbitrary third value, so the 0.74 there is clean. Restoring an early, middle, or late band of layers works about equally (0.96 / 0.97 / 0.94), so the value is stored redundantly across depth and we claim no specific circuit. Finally, a probe trained to decode the answer minus the known start value (the start inflates naive decodability) reads almost nothing two steps in (0.27) and 0.83 by the end: the answer comes into existence as the steps get written, not before.
 
-**Stronger models follow the edited value more often, not less.** Running the behavioral corruption through API prefill:
+**Bigger models follow the edited value more often, not less.** The same text-editing test through API prefill: R1-distill-7B 0.42, DeepSeek V3.2 0.78, Claude Sonnet 4.5 0.97. One might expect stronger models to hold more in their heads and lean on the trace less; the trend runs the other way. For anyone monitoring model reasoning by reading the trace, the trace stays load-bearing at the frontier. This is observational, since these models differ in far more than size.
 
-| Model | Follows corruption |
-|---|---|
-| R1-distill-7B (d=8) | 0.42 |
-| DeepSeek V3.2, 671B (d=10) | 0.78 |
-| Claude Sonnet 4.5 (d=10) | 0.97 |
+**Edits only matter when the model cannot recompute the value from the problem.** On synthetic chains the follow-the-edit rate is high at every depth (0.80, 0.64, 0.78, 0.76, 0.70 at d = 3 to 16). On GSM8K it collapses to 0.10 against a 0.05 do-nothing floor (problems with 5 or more calculation steps, n=63): a GSM8K intermediate is usually one operation away from the given numbers, so the model recomputes it and ignores the edit. Written values act as memory for state the model cannot cheaply reconstruct, and not otherwise. This predicts the assignment-core edit test on Qwen3-4B should also sit near its floor [result pending], and it is the same recomputability line that let V3.2 answer GSM8K without writing.
 
-Stronger models depend on their written values more, not less, which matters for monitoring: the trace stays load-bearing at the frontier. Observational across architectures, not a causal scale claim.
+### Token budgets and scratchpad formats
 
-**A written value only matters when the model cannot recompute it from the problem statement.** On synthetic chains the flip rate is high at every depth tested (0.80, 0.64, 0.78, 0.76, 0.70 at d = 3, 5, 8, 12, 16), yet on GSM8K corrupting a written intermediate changes the answer only 0.10 of the time against a 0.05 resampling floor (deep subset, five or more calculation steps, n=63): a GSM8K intermediate is a shallow function of the problem's givens that the model simply recomputes. Read-back carries genuinely serial, non-shortcuttable state and does not fire when recomputation is cheap. This is the same boundary that lets V3.2 answer GSM8K directly, and it is the prediction the assignment-core corruption run tests on Qwen3-4B [result pending].
+**Under a token budget, models shorten their wording but keep writing every value.** With hard output caps (V3.2, chains at d=16), traces compress up to 2.5x with accuracy intact, and then fail completely once the cap cannot fit the values themselves, rather than shifting any computation inward:
 
-**Under token budgets, models shorten their wording but keep writing every value.** Hard token budgets on V3.2 (chains, d=16) compress traces up to 2.5x with accuracy intact, then fail outright once the budget cannot fit the values, rather than moving the computation inward:
-
-| Budget, d=16 | Tokens | Accuracy | Externalization |
+| Budget (d=16) | Tokens used | Accuracy | Values written |
 |---|---|---|---|
-| Free | 466 | 1.00 | 1.00 |
+| Unlimited | 466 | 1.00 | 1.00 |
 | 256 | 184 | 0.93 | 0.98 |
-| 128 | 128 (cap) | 0.00 | 0.72 |
+| 128 | 128 (hit cap) | 0.00 | 0.72 |
 
-The failure floor sits near 12 tokens per step, below which externalization tracks budget over need (0.72, 0.36, 0.17 down the difficulty column at budget 128). Wall cells are genuine truncation (0 of 60 graded correct by accident), though the model is told its cap, so the floor conflates cannot-compress with does-not-plan.
+The failure floor sits near 12 tokens per step; below it, the fraction of values written simply tracks budget over need (0.72, 0.36, 0.17 as difficulty rises at budget 128). All wall failures are genuine truncations, not grading artifacts (0 of 60 lucky matches). One caveat: the model is told its cap, so failing to compress and failing to plan are confounded.
 
-**What matters in the trace is the computed values themselves.** Requesting the same chains in different scratchpad formats:
+**Only the computed values matter; writing operations without their results fails.** Asking for the same chains in different formats: code-style lines with each computed value succeed at d=48 in 555 tokens; ordinary prose succeeds in 1105; a verbose format restating all values every step collapses (0.07 accuracy at d=48); and a code format instructed to omit computed values succeeds only where the model disobeys and writes them anyway, with per-item value-writing correlating with correctness at +0.74 (0.58 accuracy when under half the values get written, 1.00 when nearly all do). Efficient scratchpads and legible scratchpads coincide: both are the compact value-carrying kind.
 
-| Format, d=48 | Accuracy | Tokens |
-|---|---|---|
-| Code with evaluated values | 1.00 | 555 |
-| Prose | 1.00 | 1105 |
-| Code without values | 0.97 | 440 |
-| Full-state dump | 0.07 | 3848 |
+### Serial versus parallel tasks, and the J-space ablation
 
-The no-values code format succeeds only to the degree the model disobeys it and writes values anyway: per-instance externalization correlates with correctness at +0.74 (accuracy 0.58 when under half the values get written, 1.00 when nearly all do), and at low difficulty, where compliance is high, accuracy drops to 0.70. Over-writing hurts like under-writing (the state dump collapses at depth). A compact value-carrying scratchpad is both the efficient external memory and the most legible one.
+**A task whose state is many independent values fits in the model's head; a task whose state is one long dependency chain does not.** Box tracking (5 boxes, repeatedly swapped contents) needs as much state as a chain but with no step-to-step dependency, and it behaves opposite to chains: the model tracks 16 swaps correctly while writing only about a fifth of the state, and writing does not predict correctness there (0.20 among correct versus 0.17 among wrong, where chains sit at 1.00 versus 0.5). The causal check agrees: a residual-stream lesion at matched dose cuts box-tracking accuracy by 0.34 (target window) and 0.33 (control window), against 0.11 and 0.04 for chains, at difficulties where both tasks have room to fall. The internally-stored task is about three times more fragile to internal damage, whichever window is hit. This lesion is blunt, though: it also damages the model's re-reading of written values, visible at longer chains (a 0.38 drop at d=8), which is exactly why the targeted J-space version matters.
 
-## Serial versus parallel state, and the J-space tests
-
-**Tasks that need many values at once can be done in the head; tasks where each value depends on the previous one cannot.** Box tracking stresses storage without seriality, and it behaves differently from chains: the model tracks sixteen swaps correctly while writing only about a fifth of the state, and externalization stops discriminating correct from wrong traces (0.20 versus 0.17, where chains sit at 1.00 versus 0.5). The causal counterpart: a residual lesion at matched dose (fired during prompt processing and decode, with dose parity reported on both neutral-text and on-task KL since neither meter alone is clean) drops box-tracking accuracy by 0.34 under the target window and 0.33 under the control window, against 0.11 and 0.04 for chains, where both families have headroom (d=2 to 4). The internally-stored task is about 3x more fragile to internal damage, robustly to which window is lesioned. The lesion is blunt, it also damages the re-reading of written values, which shows at longer chains (chains drop 0.38 at d=8), so the family comparison is only clean at low to middle difficulty. That bluntness motivated the targeted instrument the assignment is anchored on.
-
-**J-space ablation at a dose that leaves normal text generation intact changes nothing on these tasks.** The J-space ablation projects out, at every position, the orthonormalized preimages of the top-k concepts by lens logit, with a random orthonormal subspace at identical dose as control. The dose rule was frozen in advance: the largest k and alpha keeping neutral-text top-1 agreement at least 0.80 and perplexity ratio at most 1.30. On Qwen2.5-7B-Instruct this lands at k=16, alpha=0.5 (perplexity ratio 1.12, top-1 0.87, KL 0.20 per token; the random arm at the same dose is more damaging on neutral text, perplexity ratio 1.29, KL 0.27, which is the conservative direction for any targeted-effect claim). At that dose, direct and cot accuracy match the clean arm at every difficulty, and cot externalization stays at ceiling under the squeeze. So a targeted ablation of the top of J-space neither impairs the chains nor induces more writing, consistent with the lesion-based null on write-policy adaptation but sharper, since this squeeze is provably gentle on neutral text. Either the write policy is not load-sensitive at inference time, or chain state is carried outside the top-k lens concepts. The assignment-core 2x2 on GSM8K, ablation by condition under the same frozen-dose discipline on Qwen3-4B, discriminates these on the benchmark where the anchor result was originally claimed [result pending]; a dose escalation with neutral-text damage reported alongside is the planned follow-up.
+**Ablating the active J-space concepts, at a dose verified harmless on neutral text, changes nothing on these tasks.** The ablation removes, at every token position, the top-16 concepts the lens reads as currently active (strength 0.5, the maximum passing the pre-frozen harmlessness rule; next-token agreement 0.87 and perplexity ratio 1.12 on neutral text, with the random-directions control arm at the same size actually more disruptive on neutral text, ratio 1.29, which works against us finding a spurious targeted effect). Under this ablation, bare-answer and chain-of-thought accuracy both match the unablated model at every difficulty, and the amount the model writes does not change. So either the decision of what to write is fixed by training rather than responsive to internal load, or chain state lives outside the top lens concepts. The assignment-core 2x2 (ablation by answer-mode on GSM8K, Qwen3-4B, same frozen-dose discipline) tests which, on the benchmark where the original J-space ablation asymmetry was reported [result pending]. A dose escalation with neutral-text damage reported alongside is the natural follow-up.
 
 ## Positioning
 
-Expressivity theory says fixed-depth transformers are limited to parallel computation in one pass and that CoT length buys serial power (Merrill and Sabharwal 2023, 2024; Li et al. 2024; Feng et al. 2023); it predicts the behavioral results above and motivates the mechanism work, which it does not describe. Faithfulness studies (Turpin 2023; Lanham 2023; Bentham 2024) and the recent activations-carry-state literature (2603.05488, 2603.01437, 2604.18307, 2606.13603) establish the correlational premise. The two nearest papers stop short of the causal test: 2604.15726 calls for the token-corruption experiment it never runs, and 2605.30343 engineers latent memory blocks without manipulating capacity or measuring read-back. The J-space construct and lens are from Gurnee et al. 2026.
+Expressivity theory says fixed-depth transformers can only do limited serial computation in one forward pass and that chain-of-thought length buys serial power (Merrill and Sabharwal 2023, 2024; Li et al. 2024; Feng et al. 2023); it predicts our behavioral results and motivates the mechanism experiments, which it does not itself describe. Faithfulness studies (Turpin 2023; Lanham 2023; Bentham 2024) and recent work decoding reasoning state from activations (2603.05488, 2603.01437, 2604.18307, 2606.13603) establish the starting point that traces and internal state can disagree. The two closest papers stop short of the causal test run here: 2604.15726 calls for a token-corruption experiment it never runs, and 2605.30343 builds latent memory blocks without manipulating capacity or measuring read-back. The J-space construct and the lens are from Gurnee et al. 2026.
 
 ## Null results, withdrawn claims, and limitations
 
-Nulls and negatives, each detailed where its result lives above:
+Null and negative results, each detailed above where its experiment appears:
 
-- No externalization onset exists, so the planned onset-scaling-law phase had nothing to fit; the measurable boundary became d_int, where depth versus parameters is collinear and unresolved.
-- Damaging the workspace does not induce writing, whether by blunt lesion past its cliff (externalization falls, traces disintegrate) or by calibrated J-space ablation at the frozen dose (no change).
-- Restricting the token channel does not induce internalization (the budget wall is truncation, not compression into activations).
-- GSM8K read-back is null for recomputability reasons; the DAG task was uninformative for externalization (every node label already in the prompt); mod-97 was benched by its matcher false-positive rate.
-- Withdrawn on review: a verification-regime reading and a persistent-internal-copy reading (both explained by re-derivation from the in-context prompt still being available), and an early-decodability claim (start-value confound, corrected by the start-controlled probe).
-- The first protection attempt was invalid as coded: the lesion fired only on generated tokens, so the direct condition was barely lesioned and the comparison was not a protection test. The corrected version is the lesion result above.
+- No difficulty threshold for the onset of writing exists, so the planned onset scaling law had nothing to fit; the measurable quantity became internal capacity, where depth versus parameter count is unresolved.
+- Making the internal side scarcer does not make the model write more, whether by heavy lesion (writing degrades instead) or by calibrated J-space ablation (no change).
+- Capping the written side does not push computation inward (the budget wall is truncation, not internalization).
+- The GSM8K edit test is near its noise floor because GSM8K intermediates are recomputable; the DAG task could not measure externalization (all node names appear in the prompt); mod-97 was dropped for matcher false positives.
+- Withdrawn during review: an early claim that models verify written values against an internal copy, and a claim of a persistent internal copy (both were re-derivation from the prompt, which stays in context); an early-decodability claim (inflated by the start value, corrected by the start-controlled probe).
+- The first version of the lesion experiment was invalid (it only fired during generation, leaving the bare-answer condition nearly unlesioned) and was rerun after the fix.
 
-Limitations. Recomputability bounds the central mechanism's footprint to genuinely serial, non-shortcuttable state. Synthetic families trade ecological validity for exact ground truth. White-box causal results are at 4B to 7B; frontier evidence is behavioral. The patch overwrites the whole residual at a position; the third-value swap shows the value is the causal quantity, but the value subspace is not isolated, and decomposing the patch into its J-space projection and complement is the planned experiment that would locate the register relative to the lens-readable workspace. The lesion cannot separate workspace damage from read-back damage. The budget floor conflates cannot-compress with does-not-plan. What would most change the picture: a within-task recomputability manipulation, the J-space patch decomposition, and the pending Qwen3-4B cells, which either replicate the anchor asymmetry on the intended benchmark or extend the null to it.
+Limitations. The central mechanism applies to state the model cannot recompute, which excludes much of GSM8K-style math. Synthetic tasks trade realism for exact ground truth. White-box causal results are at 4B to 7B scale; frontier evidence is behavioral. The patch overwrites the full residual at a position, and although the third-value result shows the value is what matters, the value's own subspace is not isolated; splitting the patch into its J-space component and the remainder is the planned experiment that would locate the memory slot relative to the lens-readable workspace. The lesion cannot separate workspace damage from read-back damage. Remaining open: a within-task recomputability manipulation, that patch decomposition, and the pending Qwen3-4B cells, which either reproduce the original ablation asymmetry on its intended benchmark or extend our null to it.
 
 ## Reproducibility
 
-Pinned revisions, kept out of the main text:
+Pinned revisions:
 
 - Qwen/Qwen3-4B 1cfa9a720891; Qwen/Qwen2.5-7B-Instruct a09a35458c70
 - DeepSeek-R1-Distill-Qwen-1.5B ad9f0ae0864d; 7B 916b56a44061; 14B 1df8507178af
 - neuronpedia/jacobian-lens a4114d7752d1 (qwen3-4b and qwen2.5-7b-it artifacts); lens library commit 581d398613e5
 - GSM8K test.jsonl sha1 4a3eef48d603; HuggingFaceH4/MATH-500 6e4ed1a2a79a; HuggingFaceH4/aime_2024 2fe88a2f1091
 
-Dose rules were frozen before task cells ran. All cells log cap hits, unparseable answers, and direct-cell token counts. Raw data regenerate from src/harness; figures from src/analysis/figures.py; the dated evidence trail is notes/results-log.md.
+Dose rules were frozen before task cells ran. Every cell logs cap hits, unparseable answers, and bare-answer token counts. Raw data regenerate from src/harness; figures from src/analysis/figures.py; the dated evidence trail is notes/results-log.md.
