@@ -1,12 +1,14 @@
 # J-space and the chain of thought: where reasoning state lives
 
-Technical report. Figures in results/figures; dated evidence trail in notes/results-log.md.
+Technical report, figures in results/figures.
 
-## 1. Question, hypothesis, and design
+## 1. Research question and hypothesis
 
 **Research question.** When does a model's reasoning state live in J-space, the concept workspace read out by the Jacobian lens, and when does it live in the written chain of thought? Does the split move as problems get harder or as either side is constrained?
 
 **Hypothesis as written before running.** A memory hierarchy with a threshold: the model reasons internally while the problem fits its workspace and begins externalizing when capacity is pressured, so writing should switch on at some difficulty. The data rejected this; the revised claim the report defends is that for serial computation the written trace is the medium the computation runs in, J-space and the wider residual stream hold parallel state and roughly one dependent step, and read-back of written values is the mechanism connecting the two.
+
+## 2. Experiment design
 
 **What we varied and measured.** Difficulty (dataset ladder and synthetic step count), the token channel (open, closed, capped, edited), and the internal side (J-space ablation at a calibrated dose, residual lesion, residual patch). Measured: accuracy, externalization (fraction of ground-truth intermediate values appearing in the trace), corruption-follow rates, and per-cell bookkeeping (token-cap hits and unparseable answers logged separately from wrong answers; generated token counts in every direct cell to verify the channel was closed).
 
@@ -14,11 +16,11 @@ Technical report. Figures in results/figures; dated evidence trail in notes/resu
 
 **Datasets and tasks.** GSM8K test (openai/grade-school-math, test.jsonl sha1 4a3eef48d603); MATH-500 (HuggingFaceH4/MATH-500 rev 6e4ed1a2a79a); AIME 2024, meaning the 30 problems of AIME 2024 I and II as distributed in HuggingFaceH4/aime_2024 rev 2fe88a2f1091. These three are the difficulty ladder. Synthetic families for mechanism work, where every intermediate value has exact ground truth and difficulty d (number of dependent steps) is decoupled from output length: variable chains (3-digit start, 2-digit signed ops), modular arithmetic, box tracking, DAG reachability. Generators seeded; corruption arithmetic validated against the generators by replay tests.
 
-**Sampling.** Temperature 0.6, top-p 0.95 for chain-of-thought and thinking; temperature 0 for direct cells; fixed in advance. Ablation doses calibrated and frozen on neutral text before any task cell (Section 3.2).
+**Sampling.** Temperature 0.6, top-p 0.95 for chain-of-thought and thinking; temperature 0 for direct cells; fixed in advance. Ablation doses calibrated and frozen on neutral text before any task cell (Section 4.9).
 
-## 2. Part I: assignment core (Qwen3-4B, GSM8K / MATH-500 / AIME 2024)
+## 3. Part I: assignment core (Qwen3-4B, GSM8K / MATH-500 / AIME 2024)
 
-### 2.1 Free vs direct accuracy across the ladder
+### 4.1 Free vs direct accuracy across the ladder
 
 **Question.** How much does accuracy depend on the written channel, and how does that dependence scale with difficulty?
 
@@ -34,7 +36,7 @@ Technical report. Figures in results/figures; dated evidence trail in notes/resu
 
 **Interpretation.** The free-direct gap is large at every rung and widens with difficulty. The direct cap-rate column is a finding of its own: forbidden from writing, the model increasingly overruns the answer-only budget as problems harden (0.29 GSM8K to 0.80 AIME), that is, it tries to write anyway. Channel closure is verified by median direct token counts (5 to 32).
 
-### 2.2 J-space ablation 2x2 (ablation x condition), GSM8K
+### 4.2 J-space ablation 2x2 (ablation x condition), GSM8K
 
 **Question.** Does ablating the active J-space hurt direct answering more than chain-of-thought answering, the signature of written tokens substituting for workspace state?
 
@@ -44,7 +46,7 @@ Technical report. Figures in results/figures; dated evidence trail in notes/resu
 
 **Interpretation.** [PENDING]
 
-### 2.3 Corrupting written intermediates in GSM8K worked solutions
+### 4.3 Corrupting written intermediates in GSM8K worked solutions
 
 **Question.** Are written intermediate values causally read back on a benchmark dataset?
 
@@ -52,13 +54,13 @@ Technical report. Figures in results/figures; dated evidence trail in notes/resu
 
 **Result.** [PENDING TONIGHT'S RUN]
 
-**Interpretation.** [PENDING; the synthetic prediction from Section 3.5 is that GSM8K intermediates are largely recomputable, so the change rate should sit near the noise floor except on deeper problems]
+**Interpretation.** [PENDING; the synthetic prediction from Section 4.5 is that GSM8K intermediates are largely recomputable, so the change rate should sit near the noise floor except on deeper problems]
 
-## 3. Part II: mechanism on synthetic families
+## 4. Part II: mechanism on synthetic families
 
 The benchmark datasets cannot supply exact ground truth for every intermediate value or a difficulty knob decoupled from output length. The synthetic families supply both, and the results below explain the Part I numbers. Coarse residual-level instruments (lesion, full-residual patch) appear as precursors and robustness checks for the J-space versions.
 
-### 3.1 Externalization vs difficulty
+### 4.1 Externalization vs difficulty
 
 **Question.** Is there a difficulty threshold where writing switches on?
 
@@ -68,7 +70,7 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Interpretation.** No spill threshold exists; the write policy is saturated from the start. The 1.000 is stated as association, not necessity (the trace format writes step results by construction); its causal footing is Section 3.3. Position-uniformity and the closed-channel results below argue against a format artifact.
 
-### 3.2 Closed-channel (direct) results and internal serial capacity
+### 4.2 Closed-channel (direct) results and internal serial capacity
 
 **Question.** How much serial computation fits in a forward pass with no writing?
 
@@ -84,9 +86,9 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 | V3.2 (671B) | 0.23 | 0.03 | 0.00 | 0.00 | ~1 | yes (2 tok) |
 | R1 distills | leaked | leaked | leaked | leaked | n/a | no (74-89 percent cap) |
 
-**Interpretation.** Internal serial capacity is real, small, and model-dependent. Whether depth or parameter count sets it is unresolved (collinear within families). Two scope notes stated once here: the R1 distills leak reasoning tokens in direct mode, so their direct cells are excluded; and the ceiling is about chains of unmemorizable random values, since the same V3.2 answers 38 percent of GSM8K directly with one-word outputs (natural-problem structure is partly recomputable and memorizable). This is the same recomputability boundary as Section 3.5.
+**Interpretation.** Internal serial capacity is real, small, and model-dependent. Whether depth or parameter count sets it is unresolved (collinear within families). Two scope notes stated once here: the R1 distills leak reasoning tokens in direct mode, so their direct cells are excluded; and the ceiling is about chains of unmemorizable random values, since the same V3.2 answers 38 percent of GSM8K directly with one-word outputs (natural-problem structure is partly recomputable and memorizable). This is the same recomputability boundary as Section 4.5.
 
-### 3.3 Corruption and patch results (the read-back mechanism)
+### 4.3 Corruption and patch results (the read-back mechanism)
 
 **Question.** Are written values read back into the computation, and through what representation?
 
@@ -106,7 +108,7 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Interpretation.** The residual at the written token is a readable value register: set it to any value and the downstream computation reads and propagates that value, which also rules out answer injection (the injected quantity is a mid-chain intermediate the model never wrote). On the reasoning model the random arm is elevated (0.29) because the post-think phase re-solves from the prompt; the third-value condition is immune to that confound (re-solving yields clean, never the injected value). Returns to the clean answer under corruption are re-derivation from the in-context prompt, not evidence of an internal copy; no internal-copy claim is made. The register is carried redundantly across depth (no single-circuit localization claimed). The start-controlled probe adds that the computed part of the answer is not decodable early (0.27 two steps in, 0.83 at the end): the computation emerges as the steps are written.
 
-### 3.4 Reliance on written values across models
+### 4.4 Reliance on written values across models
 
 **Design.** Varied: model; same behavioral corruption via API prefill. Measured: fraction of answers following the edit.
 
@@ -120,7 +122,7 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Interpretation.** Reliance rises with capability rather than falling; the trace stays load-bearing at the frontier. Observational across architectures, not a causal scale claim.
 
-### 3.5 Recomputability gates read-back
+### 4.5 Recomputability gates read-back
 
 **Design.** Varied: task type at matched corruption protocol. Synthetic chains (intermediate = running total, unrecomputable without re-deriving the chain) vs GSM8K (intermediate = shallow function of the givens). Depth sweep on chains rules out depth as the gate.
 
@@ -128,7 +130,7 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Interpretation.** Read-back fires when a value cannot be cheaply recomputed from context and not otherwise; the model recomputes shallow intermediates and ignores edits. This bounds the mechanism's footprint (it carries genuinely serial, non-shortcuttable state) and predicts the Part I GSM8K corruption result. Shown by cross-task contrast, not a within-task manipulation.
 
-### 3.6 Token-budget results
+### 4.6 Token-budget results
 
 **Design.** Varied: hard output budgets 64 to 512 vs unrestricted (V3.2, chains). Measured: trace length, externalization, accuracy; truncation logged separately (0 of 60 wall cells were lucky-match artifacts).
 
@@ -142,7 +144,7 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Interpretation.** Prose compresses up to 2.5x; values are never dropped. Below roughly 12 tokens per step the model truncates and fails rather than holding values internally. One caveat: the model is told the cap, so the floor conflates cannot-compress with does-not-plan.
 
-### 3.7 Scratchpad format results
+### 4.7 Scratchpad format results
 
 **Design.** Varied: requested format at matched difficulty (prose / running state dump / code without evaluated values / code with values). Measured: accuracy, tokens, externalization.
 
@@ -159,7 +161,7 @@ Within the no-values code format, per-instance externalization correlates with c
 
 **Interpretation.** The payload is the evaluated value, not the operation or the prose; a format that suppresses value-writing fails in proportion to compliance, and over-writing (state dumps) hurts like under-writing. Compact value-carrying scratchpads are both the efficient and the most monitorable external memory.
 
-### 3.8 Serial vs parallel memory demands
+### 4.8 Serial vs parallel memory demands
 
 **Design.** Varied: task structure (chains vs 5-box tracking) x internal intervention. Behavioral: externalization among correct traces. Causal: residual lesion at matched dose (prefill and decode; neutral-text and on-task KL both reported since neither is clean alone), and the J-space version on chains (below).
 
@@ -167,7 +169,7 @@ Within the no-values code format, per-instance externalization correlates with c
 
 **Interpretation.** Serial state lives on the page; parallel state can live in activations, and the task holding state internally is about 3x more fragile to internal damage. The lesion is blunt (it also damages re-reading of written values, visible at d=8 where chains drop 0.38), so the family comparison is only clean at low-to-mid d.
 
-### 3.9 J-space instruments on the synthetic tasks
+### 4.9 J-space instruments on the synthetic tasks
 
 **Design.** Calibration on neutral text with the frozen rule; ablation = project out preimages of the top-k active lens concepts at a mid-layer band, all positions; random orthonormal subspace at identical (k, alpha) as control.
 
@@ -175,25 +177,25 @@ Within the no-values code format, per-instance externalization correlates with c
 
 **Interpretation.** At a dose that provably spares neutral-text behavior, ablating the top of J-space moves nothing on these tasks, and induced scarcity does not induce writing (consistent with the earlier lesion-based null, now with a targeted instrument). Two readings compete: the write policy is not load-sensitive at inference time, or arithmetic state is carried outside the top-k lens concepts. The Part I 2x2 on GSM8K and the planned dose escalation discriminate these.
 
-## 4. Related work
+## 5. Related work
 
 Expressivity theory says fixed-depth transformers are limited to parallel computation in one pass and that CoT length buys serial power (Merrill and Sabharwal 2023, 2024; Li et al. 2024; Feng et al. 2023); it predicts our behavioral results and motivates the mechanism work, which it does not describe. Faithfulness work (Turpin 2023; Lanham 2023; Bentham 2024) and the 2025-26 activations-carry-state wave (2603.05488, 2603.01437, 2604.18307, 2606.13603) establish the correlational premise we build on. The two nearest papers stop short of the causal test: 2604.15726 calls for the token-corruption experiment it never runs; 2605.30343 engineers latent memory blocks but never manipulates capacity or measures read-back. The J-space construct and lens are from Gurnee et al. 2026.
 
-## 5. Negative results and withdrawn claims
+## 6. Negative results and withdrawn claims
 
 Each stated once, with its result.
 
-- No externalization onset exists to fit a scaling law to; the planned onset-law phase became the d_int table of 3.2, where depth vs parameters is unresolved (collinear).
+- No externalization onset exists to fit a scaling law to; the planned onset-law phase became the d_int table of 4.2, where depth vs parameters is unresolved (collinear).
 - Damaging the workspace does not induce writing (lesion past the cliff: externalization falls; J-space ablation at the frozen dose: no change).
-- Restricting the token channel does not induce internalization (3.6).
-- GSM8K read-back is null for recomputability reasons (3.5); the DAG de-circularization task was uninformative (all node labels in the prompt); mod-97 was benched by its matcher false-positive rate.
+- Restricting the token channel does not induce internalization (4.6).
+- GSM8K read-back is null for recomputability reasons (4.5); the DAG de-circularization task was uninformative (all node labels in the prompt); mod-97 was benched by its matcher false-positive rate.
 - Withdrawn on review: a claimed verification regime and a persistent-internal-copy reading (both explained by re-derivation from the in-context prompt); an early-decodability claim (start-value confound, corrected by the start-controlled probe).
-- The original protection attempt was invalid as first coded (the lesion fired only on decode, so the direct condition was barely lesioned); fixed version reported in 3.8, J-space version in Part I.
+- The original protection attempt was invalid as first coded (the lesion fired only on decode, so the direct condition was barely lesioned); fixed version reported in 4.8, J-space version in Part I.
 
-## 6. Limitations
+## 7. Limitations
 
-Recomputability bounds the read-back mechanism's footprint (3.5). Synthetic tasks trade ecological validity for exact ground truth. White-box causal results are on 4B to 7B models; frontier evidence is behavioral. The lesion cannot cleanly separate workspace damage from read-back damage. The patch overwrites the whole residual at a position; value-specificity is shown by the third-value swap, not by isolating the value subspace (the J-space patch decomposition is planned). Single seeds on some causal cells; ns are stated per table.
+Recomputability bounds the read-back mechanism's footprint (4.5). Synthetic tasks trade ecological validity for exact ground truth. White-box causal results are on 4B to 7B models; frontier evidence is behavioral. The lesion cannot cleanly separate workspace damage from read-back damage. The patch overwrites the whole residual at a position; value-specificity is shown by the third-value swap, not by isolating the value subspace (the J-space patch decomposition is planned). Single seeds on some causal cells; ns are stated per table.
 
-## 7. Reproducibility
+## 8. Reproducibility
 
-Model, dataset, and artifact revisions in Section 1. Dose rules frozen before task runs and stated in 3.9 and 2.2. All cells log cap hits, unparseable answers, and direct-cell token counts. Raw data regenerable from src/harness; figures from src/analysis/figures.py.
+Model, dataset, and artifact revisions in Section 1. Dose rules frozen before task runs and stated in 4.9 and 3.2. All cells log cap hits, unparseable answers, and direct-cell token counts. Raw data regenerable from src/harness; figures from src/analysis/figures.py.
