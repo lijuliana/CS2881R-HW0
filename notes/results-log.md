@@ -164,4 +164,10 @@ Re-ran A1 decoding answer-minus-start (the start value removed, so the target is
 
 Two clean conclusions. The probing machinery is validated (0.83 late decodability, control at chance). And the pre-CoT-decoding phenomenon does not hold for the genuinely computed quantity on our tasks: the answer is not sitting in the activations before the model writes the steps, it emerges as the steps are written, which is what the thesis predicts (the computation happens on the page). This is the honest, start-controlled version of the earlier confounded curve.
 
+## 2026-08-06, assignment core: Qwen3-4B ladder complete, GSM8K edit test overturns a prediction
+
+Ladder (n=150/150/30, thinking vs bare-answer): non-truncated thinking accuracy 0.99 / 0.76 / 0.90 down GSM8K, MATH-500, AIME 2024; bare-answer 0.12 / 0.19 / 0.00; bare-answer overrun rate climbs 0.29 / 0.47 / 0.80 (told not to write, the model tries anyway, more as problems harden); median thinking length 1952 / 3503 / 11819 tokens.
+
+Edit test on GSM8K worked solutions (n=84): the answer follows a corrupted intermediate 0.87 of the time against a 0.00 resample floor. We predicted near-floor from the V3.2 result (0.10). The prediction failed, and the two results together revise the recomputability claim into its model-relative form: the 671B recomputes GSM8K intermediates and ignores edits, the 4B cannot and reads them back. Read-back fires when recomputing a value exceeds the model's internal capacity; what a frontier model recomputes, a small model must reread. Consistent with the chains capability trend (stronger models follow non-recomputable values more faithfully).
+
 Note on this file: it is the lab notebook, in dated order, including interim readings that were later revised. For the settled claims see notes/synthesis.md, for what did not work see notes/negative-results.md, and for the writeup see paper/main.md.
