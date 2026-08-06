@@ -260,11 +260,11 @@ since these models differ in far more than size.
 
 \textbf{Edits only matter when the model cannot recompute the value from
 the problem.} On synthetic chains the follow-the-edit rate is high at
-every depth (0.80, 0.64, 0.78, 0.76, 0.70 at d = 3 to 16). On GSM8K it
-collapses to 0.10 against a 0.05 do-nothing floor (problems with 5 or
-more calculation steps, n=63): a GSM8K intermediate is usually one
-operation away from the given numbers, so the model recomputes it and
-ignores the edit. Written values act as memory for state the model
+every depth (0.80, 0.64, 0.78, 0.76, 0.70 at d = 3, 5, 8, 12, 16). On
+GSM8K it collapses to 0.10 against a 0.05 do-nothing floor (problems
+with 5 or more calculation steps, n=63): a GSM8K intermediate is usually
+one operation away from the given numbers, so the model recomputes it
+and ignores the edit. Written values act as memory for state the model
 cannot cheaply reconstruct, and not otherwise. We predicted the
 assignment-core edit test on Qwen3-4B would therefore also sit near its
 floor. That prediction failed, and the failure sharpened the claim: on
@@ -358,14 +358,17 @@ concepts. The assignment-core 2x2 (ablation by answer-mode on GSM8K,
 Qwen3-4B, frozen dose k=8, alpha=0.5) extends the null to the benchmark
 where the original asymmetry was reported: chain-of-thought accuracy is
 0.97 clean, 0.93 under J-space ablation, and 0.93 under the random
-control (n=30 per cell), so the ablation does no more than matched
-random damage, and the bare-answer condition sits at floor for a 4B on
-GSM8K (0.00 to 0.03 everywhere, with 0.37 to 0.60 of attempts
-overrunning the answer budget), leaving no headroom in which a
-differential could appear. No ablation-by-condition asymmetry is present
-in either testbed, the synthetic chains that do have bare-answer
-headroom or the benchmark that does not. A dose escalation with
-neutral-text damage reported alongside is the natural follow-up.
+control (n=30 per cell; this condition is a no-think worked solution on
+the first 30 test problems with a 512-token cap, so its clean baseline
+is not comparable to the thinking-mode ladder cell above), so the
+ablation does no more than matched random damage, and the bare-answer
+condition sits at floor for a 4B on GSM8K (0.00 to 0.03 everywhere, with
+0.37 to 0.60 of attempts overrunning the answer budget), leaving no
+headroom in which a differential could appear. No ablation-by-condition
+asymmetry is present in either testbed, the synthetic chains that do
+have bare-answer headroom or the benchmark that does not. A dose
+escalation with neutral-text damage reported alongside is the natural
+follow-up.
 
 \section{Positioning}\label{positioning}
 
@@ -465,9 +468,9 @@ isolated; splitting the patch into its J-space component and the
 remainder is the planned experiment that would locate the memory slot
 relative to the lens-readable workspace. The lesion cannot separate
 workspace damage from read-back damage. Remaining open: a within-task
-recomputability manipulation, that patch decomposition, and the pending
-Qwen3-4B cells, which either reproduce the original ablation asymmetry
-on its intended benchmark or extend our null to it.
+recomputability manipulation, that patch decomposition, and a dose
+escalation of the J-space ablation with neutral-text damage reported
+alongside.
 
 \section{Reproducibility}\label{reproducibility}
 

@@ -33,3 +33,9 @@ notes/negative-results.md
 !results/raw/protection_var_7b_fix10.jsonl
 !results/raw/budget_var_v32.jsonl
 !results/raw/format_var_v32.jsonl
+paper/icml/*.aux
+paper/icml/*.log
+paper/icml/*.fls
+paper/icml/*.fdb_latexmk
+paper/icml/*.synctex*
+paper/icml/pdflatex*
