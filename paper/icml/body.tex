@@ -141,6 +141,7 @@ V3.2 (671B) & 0.23 & 0.03 & 0.00 & 0.00 & Yes (2 tokens) \\
 R1 distills & - & - & - & - & No (74-89 percent overran) \\
 \bottomrule
 \end{tabular}
+\caption{Bare-answer accuracy on synthetic chains with the written channel verifiably closed. The R1 distills are excluded because they kept generating reasoning tokens.}
 \end{table*}
 
 The R1 distills kept generating reasoning despite the no-think template,
@@ -177,6 +178,7 @@ MATH-500 (n=150) & 0.11 (0.19) & 0.65 (0.76) & 0.47 & 0.23 \\
 AIME 2024 (n=30) & 0.00 (0.00) & 0.67 (0.90) & 0.80 & 0.30 \\
 \bottomrule
 \end{tabular}
+\caption{Qwen3-4B on the assignment ladder: bare-answer vs thinking accuracy, overall and among non-truncated generations, with budget-overrun and cap rates.}
 \end{table*}
 
 Writing is not overflow from a full workspace: the workspace never held
@@ -228,6 +230,7 @@ Same experiment on the reasoning model (n=91) & Correct-restore 1.00;
 third value 0.74 {[}0.66, 0.82{]} \\
 \bottomrule
 \end{tabular}
+\caption{Residual-patch outcomes at the edited token (Qwen2.5-7B-Instruct, ten-step chains, n=141). Bracketed values are bootstrap 95 percent intervals.}
 \end{table*}
 
 The third-value row is the important one: the answer tracks whatever
@@ -299,6 +302,7 @@ Unlimited & 466 & 1.00 & 1.00 \\
 128 & 128 (hit cap) & 0.00 & 0.72 \\
 \bottomrule
 \end{tabular}
+\caption{Accuracy and fraction of intermediate values written under hard token budgets (DeepSeek V3.2, sixteen-step chains).}
 \end{table*}
 
 The failure floor sits near 12 tokens per step; below it, the fraction

@@ -4,20 +4,18 @@
 \usepackage[accepted]{icml2025}
 \usepackage{newtxtext}
 \usepackage{newtxmath}
+\usepackage{flushend}
 \icmltitlerunning{J-Space and the Chain of Thought}
 \begin{document}
 \twocolumn[
 \icmltitle{J-Space and the Chain of Thought: Where Reasoning State Lives}
 \icmlsetsymbol{equal}{*}
 \begin{icmlauthorlist}
-\icmlauthor{Juliana Li}{harvard}
+\icmlauthor{Juliana Li}{}
 \end{icmlauthorlist}
-\icmlaffiliation{harvard}{Harvard University}
-\icmlcorrespondingauthor{Juliana Li}{julianali@college.harvard.edu}
 \icmlkeywords{interpretability, chain of thought, J-space}
 \vskip 0.3in
 ]
-\printAffiliationsAndNotice{}
 \begin{abstract}
 We ask where a language model keeps intermediate results during multi-step reasoning: in J-space, the internal concept workspace read out by the Jacobian lens, or in the written chain of thought. Against the hierarchy hypothesis we wrote down before running, models write out every intermediate step even on trivial problems, fail almost immediately when writing is forbidden, and are unaffected by a J-space ablation calibrated to leave normal text generation intact. Editing and patching experiments show the written chain of thought is where serial computation happens: the model reads its own written values back through the internal state at each written token, the answer follows whatever value we write into that state, and the only state that stays internal is parallel or cheaply recomputable. We report results on Qwen3-4B over GSM8K, MATH-500, and AIME 2024, with synthetic-task experiments isolating the mechanism.
 \end{abstract}
