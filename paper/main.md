@@ -26,13 +26,13 @@ If models write everything, the next question is what happens when they cannot w
 
 The R1 distills leak reasoning tokens in direct mode despite think-suppression, so their direct cells are excluded rather than reported as closed-channel evidence. Internal serial capacity is real, small, and model-dependent; whether depth or parameter count sets it we cannot resolve, since the two are collinear within families. And the ceiling is specifically about chains of unmemorizable random values: the same V3.2 that fails two synthetic steps answers 38 percent of GSM8K directly with one-word outputs, because natural problems are partly recomputable and memorizable. That contrast returns below as the boundary of the read-back mechanism.
 
-The assignment ladder shows the same structure at benchmark scale. On Qwen3-4B, free (thinking) accuracy declines down the ladder while direct accuracy is near floor everywhere, and the cap-rate column carries an observation the termination logging surfaced: forbidden from writing, the model overruns its answer-only budget more and more often as problems harden. It increasingly tries to write anyway.
+The assignment ladder shows the same structure at benchmark scale. On Qwen3-4B, free (thinking) accuracy declines down the ladder while direct accuracy is near floor everywhere, and the cap-rate column carries an observation the termination logging surfaced: forbidden from writing, the model overruns its answer-only budget more and more often as problems harden (0.29 on GSM8K to 0.80 on AIME). It increasingly tries to write anyway. The cost of the written channel is the cleanest difficulty readout of all: median thinking length grows from 1952 tokens on GSM8K to 3503 on MATH-500 to 11819 on AIME.
 
 | Dataset | Direct acc (non-cap) | Free acc (non-cap) | Direct cap rate | Free cap rate |
 |---|---|---|---|---|
 | GSM8K | 0.10 (0.12) | 0.84 (0.99) | 0.29 | 0.46 |
 | MATH-500 | 0.11 (0.19) | 0.65 (0.76) | 0.47 | 0.23 |
-| AIME 2024 | 0.00 (0.00) | [pending final cell] | 0.80 | [pending] |
+| AIME 2024 | 0.00 (0.00) | 0.67 (0.90) | 0.80 | 0.30 |
 
 Together these rule out the overflow picture. Writing is not what happens when a sufficient workspace fills, because the workspace never held a chain to begin with. But saturation alone cannot distinguish a trace that carries the computation from one that narrates it, which is what the corruption experiments were run to decide.
 
