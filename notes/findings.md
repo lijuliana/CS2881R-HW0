@@ -2,6 +2,8 @@
 
 Research question: When does a model's reasoning live in J-space, the concept workspace read out by the Jacobian lens, and when does it live in the written chain of thought? Does the split move as problems get harder or as either side is constrained?
 
+Setup under the assignment constraints: model Qwen3-4B (HF revision 1cfa9a720891) with the fitted public lens (neuronpedia/jacobian-lens revision a4114d7752d1, qwen3-4b artifact; library commit 581d398613e5). Datasets: GSM8K test (openai/grade-school-math, test.jsonl sha1 4a3eef48d603), MATH-500 (HuggingFaceH4/MATH-500 revision 6e4ed1a2a79a), and AIME 2024, by which we mean the 30 problems of AIME 2024 I and II as distributed in HuggingFaceH4/aime_2024 revision 2fe88a2f1091. The three sets are the difficulty ladder, easy to hard. Ablation doses are calibrated and frozen on neutral text before any task cell; every cell logs token-cap hits and unparseable answers separately from wrong answers, and direct cells log generated token counts to verify the channel was closed.
+
 Terms used throughout:
 
 * **J-space**: the model's active concept workspace, read and intervened on through a fitted Jacobian lens (per-layer maps whose readout is the concepts currently loaded; ablation projects out the preimages of the top active concepts). Our targeted internal instrument.
@@ -10,11 +12,27 @@ Terms used throughout:
 * **d**: difficulty, the number of dependent steps in a synthetic problem (chained arithmetic, variable chains, box tracking). Every intermediate value has known ground truth.
 * **Externalization**: fraction of those ground-truth values that appear in the written trace.
 
-The argument runs J-space outward. A calibrated J-space ablation and a J-space patch decomposition are the primary internal instruments; the earlier residual-level lesion and full-residual patch are the coarse-grained versions that motivated them and now serve as robustness checks. The claims that survive at both grains are stated as internal-vs-external claims; the ones tested only at one grain say so.
+The argument runs J-space outward, in two parts. Part I is the assignment core on Qwen3-4B and the three benchmark datasets: the free-vs-direct ladder, the calibrated J-space ablation 2x2, and the corruption test on GSM8K worked solutions. Part II is the mechanism supplement on synthetic families, which exist because the benchmark datasets cannot supply what causal work needs, exact ground truth for every intermediate value and a difficulty knob decoupled from output length; the synthetic results explain why the Part I benchmark numbers look the way they do. Coarse residual-level instruments (lesion, full-residual patch) appear as the precursors that motivated the J-space versions and as robustness checks.
 
 Each finding states the manipulated variable, the measurement, and the result.
 
-## Main findings
+## Part I: assignment core (Qwen3-4B, GSM8K / MATH-500 / AIME 2024)
+
+### I.1 Free vs direct across the difficulty ladder
+
+[results pending: tonight's sweep]
+
+### I.2 J-space ablation 2x2 (ablation on/off x direct/cot), GSM8K
+
+[results pending: tonight's calibrated 2x2]
+
+### I.3 Corrupting written intermediates in GSM8K worked solutions
+
+[results pending: tonight's read-back run]
+
+## Part II: mechanism supplement (synthetic families)
+
+### Established on the synthetic families
 
 ### 1. Externalization is saturated from the easiest problems onward
 
