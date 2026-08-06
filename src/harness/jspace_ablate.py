@@ -205,7 +205,8 @@ def main():
     ap.add_argument("--ks", default="4,8,16")
     ap.add_argument("--alphas", default="0.5,1.0")
     ap.add_argument("--family", default="variable_chain",
-                    choices=["variable_chain", "entity_tracking"])
+                    choices=["variable_chain", "entity_tracking", "gsm8k"])
+    ap.add_argument("--data-dir", default="data")
     ap.add_argument("--difficulties", default="1,2,4,8")
     ap.add_argument("--n", type=int, default=40)
     ap.add_argument("--max-new-cot", type=int, default=640)
@@ -240,17 +241,42 @@ def main():
 
     gen = (variable_chain if args.family == "variable_chain"
            else lambda d, s: entity_tracking(5, d, s))
-    diffs = [int(x) for x in args.difficulties.split(",")]
+    gsm = None
+    if args.family == "gsm8k":
+        # assignment-dataset mode: difficulty axis is a single pooled set,
+        # gold answers from the dataset, chat template with /no_think so
+        # cot is a worked solution and direct is answer-only
+        gsm = [json.loads(l) for l in
+               open(os.path.join(args.data_dir, "gsm8k_test.jsonl"))]
+        diffs = [0]
+    else:
+        diffs = [int(x) for x in args.difficulties.split(",")]
     arms = ["clean", "jlens", "random"]
     out = open(args.out, "w")
+
+    def make_prompt_answer(cond, d, s):
+        if gsm is not None:
+            row = gsm[s]
+            gold = row["answer"].split("####")[-1].strip().replace(",", "")
+            q = row["question"]
+            suffix = ("\nGive only the final answer, nothing else. Do not "
+                      "show any working. /no_think" if cond == "direct"
+                      else "\nSolve step by step, then end with "
+                      "'#### <number>'. /no_think")
+            p = tok.apply_chat_template(
+                [{"role": "user", "content": q + suffix}], tokenize=False,
+                add_generation_prompt=True, enable_thinking=False)
+            return p, gold, None
+        inst = gen(d, s)
+        return build_prompt(inst, cond, tok, False), inst.answer, inst
+
     for arm in arms:
         for cond in ["direct", "cot"]:
             cap = (args.max_new_direct if cond == "direct"
                    else args.max_new_cot)
             for d in diffs:
                 for s in range(args.n):
-                    inst = gen(d, s)
-                    prompt = build_prompt(inst, cond, tok, False)
+                    prompt, answer, inst = make_prompt_answer(cond, d, s)
                     ids = tok(prompt, return_tensors="pt").to(device)
                     if arm == "clean":
                         o = model.generate(
@@ -272,9 +298,14 @@ def main():
                     gen_tok = o.shape[1] - ids.input_ids.shape[1]
                     text = tok.decode(o[0][ids.input_ids.shape[1]:],
                                       skip_special_tokens=True)
-                    pred = extract_answer(text, cond)
+                    if gsm is not None:
+                        m = re.findall(r"####\s*\$?(-?[\d,]+)", text)
+                        pred = (m[-1].replace(",", "") if m
+                                else extract_answer(text, cond))
+                    else:
+                        pred = extract_answer(text, cond)
                     correct, hit_cap, unparseable = classify(
-                        pred, inst.answer, gen_tok, cap)
+                        pred, answer, gen_tok, cap)
                     ext = None
                     if cond == "cot" and args.family == "variable_chain":
                         # externalization under ablation: does a targeted
