@@ -32,7 +32,6 @@ Each finding states the manipulated variable, the measurement, and the result.
 
 ## Part II: mechanism supplement (synthetic families)
 
-### Established on the synthetic families
 
 ### 1. Externalization is saturated from the easiest problems onward
 
