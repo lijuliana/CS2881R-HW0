@@ -5,7 +5,7 @@ __pycache__/
 .venv/
 venv/
 *.ipynb_checkpoints
-results/raw/
+results/raw/*
 *.pt
 *.safetensors
 .env
