@@ -114,3 +114,13 @@ Primary headline, contingent on gate A: induced internal scarcity causes compens
 ## Order of operations
 
 Gates A and B first, week 1, on whatever single GPU comes up soonest. Phase 1 alongside them (behavioral, cheap, and its curves pick the d ranges for everything else). Phase 2 on 7B once probing infrastructure is up. Phases 3 and 4 depend on 1 and 2 and on the gates. Phase 5 floats.
+
+## J-space program, part 2 (planned, not yet run)
+
+Part 1 (run) froze the ablation dose on neutral text and ran the anchor 2x2xd on chains. The remainder, in priority order:
+
+1. Patch decomposition (harness written, src/harness/jspace_patch.py): in the read-back patch, restore only the J-space projection of the clean-minus-corrupt delta vs only its complement, with a random rank-matched projection control. Decides whether the readable value register lives in the lens-readable concept workspace. Replaces the full-residual patch as the headline version; full-residual stays as the sanity baseline.
+2. Box tracking under J-space ablation (same harness, --family entity_tracking): the serial/parallel comparison with the targeted instrument. Prediction if J-space is the parallel workspace: boxes suffer more disproportionately than under the blunt lesion.
+3. Multi-dose N2: repeat the cot cells at the two doses above the frozen one (k=16 alpha=1.0, and k=32) to test whether scarcity-induced writing appears at doses the freeze rule excluded, reporting neutral-text damage alongside so the trade-off is explicit.
+4. Qwen3 extension: the artifact also covers qwen3-8b; rerun part 1 there to check the result is not a Qwen2.5 quirk.
+5. Second-GPU parallelization when capacity returns; all four items are independent.
