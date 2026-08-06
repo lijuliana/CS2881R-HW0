@@ -20,7 +20,7 @@ Technical report, figures in results/figures.
 
 ## 3. Part I: assignment core (Qwen3-4B, GSM8K / MATH-500 / AIME 2024)
 
-### 4.1 Free vs direct accuracy across the ladder
+### 3.1 Free vs direct accuracy across the ladder
 
 **Question.** How much does accuracy depend on the written channel, and how does that dependence scale with difficulty?
 
@@ -36,7 +36,7 @@ Technical report, figures in results/figures.
 
 **Interpretation.** The free-direct gap is large at every rung and widens with difficulty. The direct cap-rate column is a finding of its own: forbidden from writing, the model increasingly overruns the answer-only budget as problems harden (0.29 GSM8K to 0.80 AIME), that is, it tries to write anyway. Channel closure is verified by median direct token counts (5 to 32).
 
-### 4.2 J-space ablation 2x2 (ablation x condition), GSM8K
+### 3.2 J-space ablation 2x2 (ablation x condition), GSM8K
 
 **Question.** Does ablating the active J-space hurt direct answering more than chain-of-thought answering, the signature of written tokens substituting for workspace state?
 
@@ -46,7 +46,7 @@ Technical report, figures in results/figures.
 
 **Interpretation.** [PENDING]
 
-### 4.3 Corrupting written intermediates in GSM8K worked solutions
+### 3.3 Corrupting written intermediates in GSM8K worked solutions
 
 **Question.** Are written intermediate values causally read back on a benchmark dataset?
 
@@ -68,7 +68,7 @@ The benchmark datasets cannot supply exact ground truth for every intermediate v
 
 **Result.** Externalization 0.93 to 1.00 everywhere including d=1, every model. Split by correctness at d of 16 and up: exactly 1.000 among correct traces (n=1935 pooled over three distill sizes), about 0.5 among wrong ones. Uniform across chain position (early, middle, late all 1.00).
 
-**Interpretation.** No spill threshold exists; the write policy is saturated from the start. The 1.000 is stated as association, not necessity (the trace format writes step results by construction); its causal footing is Section 3.3. Position-uniformity and the closed-channel results below argue against a format artifact.
+**Interpretation.** No spill threshold exists; the write policy is saturated from the start. The 1.000 is stated as association, not necessity (the trace format writes step results by construction); its causal footing is Section 4.3. Position-uniformity and the closed-channel results below argue against a format artifact.
 
 ### 4.2 Closed-channel (direct) results and internal serial capacity
 
