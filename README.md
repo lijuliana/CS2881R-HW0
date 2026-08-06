@@ -6,13 +6,14 @@ We ask where a model keeps intermediate results during multi-step reasoning: in 
 
 ## Main findings
 
-- **There is no difficulty threshold where writing switches on.** Models write nearly every intermediate value even on one-step problems, at every scale tested (1.5B to 671B). The planned onset scaling law had nothing to fit.
-- **Forbidden from writing, models fail after one or two dependent steps** (verified closed-channel; Llama-70B reaches about five). On Qwen3-4B the same shows as a huge thinking-vs-bare-answer gap on all three benchmarks, and the model increasingly overruns its answer-only budget as problems harden (0.29 of GSM8K attempts to 0.80 of AIME attempts): told not to write, it tries anyway.
-- **The written values are causally load-bearing, and the internal state at a written token acts like a memory slot.** Editing one written value flips the final answer; overwriting the internal state at that token makes the answer follow whatever value we write in, including values the model never wrote (0.76 of items), while a same-size random perturbation does nothing.
-- **Stronger models follow their written values more, not less** (0.42 at 7B, 0.78 at 671B, 0.97 for Claude Sonnet 4.5), so the trace stays load-bearing at the frontier.
-- **Written values only matter when the model cannot recompute them.** The edit test is near its noise floor on GSM8K because those intermediates are one step from the given numbers; on synthetic chains, where values cannot be reconstructed, edits dominate at every depth.
-- **A J-space ablation at a dose verified harmless on neutral text changes nothing** on these tasks, in accuracy or in how much the model writes, against a random-directions control at identical dose.
-- Under token budgets models shorten wording but never drop values (failure floor near 12 tokens per step); tasks with parallel state (box tracking) live in activations while chained state lives on the page, and an internal lesion hurts the internally-stored task about 3x more.
+1. **Models write out every intermediate step even on trivial problems.** The fraction of known intermediate values appearing in the trace is 0.93 to 1.00 from one-step problems up, at every scale tested (1.5B to 671B). There is no difficulty threshold where writing switches on, so the planned onset scaling law had nothing to fit.
+2. **Forbidden from writing, models fail after one or two dependent steps** (channel closure verified from token counts; Llama-70B reaches about five). On Qwen3-4B this shows as a large thinking-vs-bare-answer gap on all three benchmarks, and the model overruns its answer-only budget more often as problems harden (0.29 of GSM8K attempts, 0.80 of AIME attempts): told not to write, it tries anyway.
+3. **Change one written value in the model's own work and the final answer usually follows the change** (0.84 of items on the causal testbed).
+4. **Overwriting the internal state at the edited token controls the answer, whatever value we write into it**, including values the model never wrote (followed 0.76 of the time; a same-size random perturbation does nothing). The state at a written token works like a memory slot that later computation reads.
+5. **Stronger models follow the edited value more often, not less** (0.42 at 7B, 0.78 at 671B, 0.97 for Claude Sonnet 4.5), so the written trace stays load-bearing at the frontier.
+6. **Edits only matter when the model cannot recompute the value from the problem.** On GSM8K the edit test sits at its noise floor because those intermediates are one operation from the given numbers; on synthetic chains, where values cannot be reconstructed, edits dominate at every depth.
+7. **A J-space ablation at a dose verified harmless on neutral text changes nothing**, in accuracy or in how much the model writes, against a random-directions control at identical dose.
+8. **Under token budgets models shorten wording but never drop values** (failure floor near 12 tokens per step), and **parallel state lives in activations while chained state lives on the page** (box tracking succeeds with a fifth of its state written; an internal lesion hurts the internally-stored task about 3x more).
 
 ## Repository structure
 
