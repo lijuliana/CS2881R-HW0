@@ -351,10 +351,17 @@ at every difficulty, and the amount the model writes does not change. So
 either the decision of what to write is fixed by training rather than
 responsive to internal load, or chain state lives outside the top lens
 concepts. The assignment-core 2x2 (ablation by answer-mode on GSM8K,
-Qwen3-4B, same frozen-dose discipline) tests which, on the benchmark
-where the original J-space ablation asymmetry was reported {[}result
-pending{]}. A dose escalation with neutral-text damage reported
-alongside is the natural follow-up.
+Qwen3-4B, frozen dose k=8, alpha=0.5) extends the null to the benchmark
+where the original asymmetry was reported: chain-of-thought accuracy is
+0.97 clean, 0.93 under J-space ablation, and 0.93 under the random
+control (n=30 per cell), so the ablation does no more than matched
+random damage, and the bare-answer condition sits at floor for a 4B on
+GSM8K (0.00 to 0.03 everywhere, with 0.37 to 0.60 of attempts
+overrunning the answer budget), leaving no headroom in which a
+differential could appear. No ablation-by-condition asymmetry is present
+in either testbed, the synthetic chains that do have bare-answer
+headroom or the benchmark that does not. A dose escalation with
+neutral-text damage reported alongside is the natural follow-up.
 
 \section{Positioning}\label{positioning}
 
