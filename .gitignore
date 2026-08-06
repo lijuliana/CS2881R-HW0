@@ -11,3 +11,8 @@ results/raw/
 .env
 .DS_Store
 data/
+notes/findings-full.md
+notes/synthesis.md
+notes/status.md
+notes/hardening.md
+notes/negative-results.md
